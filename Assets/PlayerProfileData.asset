@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53f139bf77489ab40843d5faa2d24387, type: 3}
+  m_Name: PlayerProfileData
+  m_EditorClassIdentifier: Assembly-CSharp::KanairoCity.Models.PlayerProfileData
+  CharacterName: Citizen
+  SelectedProfession: 0
+  SavedCharacterId: 
+  Money: 1000
+  Reputation: 0
+  Popularity: 0
+  PoliceRespect: 50
+  VendorSkill: 0
+  DrivingSkill: 0
+  LastSelectedMode: 0
+  IsCharacterCreated: 0
