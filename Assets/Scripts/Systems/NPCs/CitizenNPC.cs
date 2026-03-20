@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace KanairoCity.Systems.NPCs
 {
@@ -22,19 +23,31 @@ namespace KanairoCity.Systems.NPCs
         private GameObject currentTarget;
         
         [Header("References")]
-        public UnityEngine.AI.NavMeshAgent agent;
+        public NavMeshAgent agent;
         public Animator animator;
 
         protected virtual void Awake()
         {
-            if (agent == null) agent = GetComponent<UnityEngine.AI.NavMeshAgent>();
+            if (agent == null) agent = GetComponent<NavMeshAgent>();
             if (animator == null) animator = GetComponentInChildren<Animator>();
+        }
+
+        protected virtual void Start()
+        {
+            // Set area mask to prioritize sidewalks and crosswalks.
+            if (agent != null)
+            {
+                // Bitmask for Area 0 (Walkable), 3 (Sidewalk), and 4 (Crosswalk)
+                int mask = (1 << 0) | (1 << 3) | (1 << 4);
+                agent.areaMask = mask;
+            }
         }
 
         protected virtual void Update()
         {
             UpdateNeeds();
             UpdateState();
+            UpdateAnimations();
         }
 
         private void UpdateNeeds()
@@ -65,19 +78,25 @@ namespace KanairoCity.Systems.NPCs
             }
         }
 
+        private void UpdateAnimations()
+        {
+            if (animator != null && agent != null)
+            {
+                float speed = agent.velocity.magnitude;
+                animator.SetFloat("Speed", speed);
+            }
+        }
+
         public virtual void SetState(NPCState newState)
         {
             if (currentState == newState) return;
             currentState = newState;
-            
-            // Log state change for debugging
-            // Debug.Log($"{npcName} state: {newState}");
         }
 
         protected virtual void HandleIdle() { }
         protected virtual void HandleWalk() 
         {
-            if (agent != null && agent.remainingDistance < 0.5f)
+            if (agent != null && !agent.pathPending && agent.remainingDistance < 0.5f)
                 SetState(NPCState.Idle);
         }
         protected virtual void HandleInteract() { }
@@ -87,7 +106,7 @@ namespace KanairoCity.Systems.NPCs
         public void MoveTo(Vector3 destination)
         {
             currentDestination = destination;
-            if (agent != null)
+            if (agent != null && agent.isOnNavMesh)
             {
                 agent.SetDestination(destination);
                 SetState(NPCState.Walk);

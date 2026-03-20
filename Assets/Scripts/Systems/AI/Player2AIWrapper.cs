@@ -1,66 +1,43 @@
 using UnityEngine;
-using AiToolbox;
-using System.Collections.Generic;
-using System;
+using player2_sdk;
 
 namespace KanairoCity.Systems.AI
 {
     public interface IPlayer2AI
     {
-        void ReceivePrompt(string prompt, Action<string> onResponse);
         void HandleBehavior(GameObject npc, string response);
     }
 
     /// <summary>
-    /// This is a wrapper for AI integration using AI Toolbox (ChatGPT).
-    /// It provides a clean way to bridge with AI services
-    /// without coupling NPC logic directly to the AI SDK.
+    /// This is a wrapper for AI integration using the Player2 SDK.
+    /// It works alongside the Player2Npc component to manage AI-driven behaviors.
     /// </summary>
+    [RequireComponent(typeof(player2_sdk.Player2Npc))]
     public class Player2AIWrapper : MonoBehaviour, IPlayer2AI
     {
-        [Header("AI Settings")]
-        public ChatGptParameters parameters;
-        [TextArea] public string baseContext = "You are an NPC in Nairobi. Your tone is local and friendly.";
-
-        private List<Message> _conversationHistory = new List<Message>();
-
-        private void Start()
+        [Header("Player2 References")]
+        public player2_sdk.Player2Npc p2Npc;
+        
+        private void Awake()
         {
-            if (parameters == null || string.IsNullOrEmpty(parameters.apiKey))
-            {
-                Debug.LogWarning($"AI Parameters or API Key missing on {gameObject.name}");
-            }
-        }
-
-        public void ReceivePrompt(string prompt, Action<string> onResponse)
-        {
-            if (parameters == null) return;
-
-            // Create a temporary parameters object with the specific role/context for this NPC
-            ChatGptParameters npcParams = new ChatGptParameters(parameters) { role = baseContext };
-            
-            _conversationHistory.Add(new Message(prompt, Role.User));
-
-            ChatGpt.Request(_conversationHistory, npcParams, 
-                completeCallback: (response) => {
-                    _conversationHistory.Add(new Message(response, Role.AI));
-                    onResponse?.Invoke(response);
-                },
-                failureCallback: (code, error) => {
-                    Debug.LogError($"AI Request failed: {error} (Code: {code})");
-                }
-            );
+            if (p2Npc == null) p2Npc = GetComponent<player2_sdk.Player2Npc>();
         }
 
         public void HandleBehavior(GameObject npc, string response)
         {
-            // Simple keyword-based behavior mapping from AI response
+            // Simple keyword-based behavior mapping from Player2 AI response
             string lowerResponse = response.ToLower();
             
-            // Example behaviors
-            if (lowerResponse.Contains("walk away") || lowerResponse.Contains("goodbye"))
+            // Logic to check if AI convinced NPC to do something
+            if (lowerResponse.Contains("fine, i'll buy") || lowerResponse.Contains("okay, i'm getting in"))
             {
-                // Trigger NPC walk state
+                Debug.Log($"{npc.name} was convinced by the Player!");
+                // Trigger success logic (e.g., Passenger boards, Customer buys)
+            }
+            
+            if (lowerResponse.Contains("walk away") || lowerResponse.Contains("not interested"))
+            {
+                Debug.Log($"{npc.name} is walking away.");
             }
         }
     }
