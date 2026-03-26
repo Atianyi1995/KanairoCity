@@ -1,4 +1,6 @@
 ﻿using Invector;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class vSnapToBody : MonoBehaviour
@@ -15,13 +17,13 @@ public class vSnapToBody : MonoBehaviour
         {
             if (bodySnap != null && bodySnap.boneSnappingList != null)
             {
-                boneToSnap = bodySnap.GetBone(boneName);
+                boneToSnap = bodySnap.GetBone(boneName);               
             }
         }
 
         if (boneToSnap)
         {
-            transform.parent = boneToSnap;
+            transform.parent = boneToSnap;           
         }
-    }
+    }    
 }

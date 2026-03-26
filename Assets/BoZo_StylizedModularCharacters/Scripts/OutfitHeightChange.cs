@@ -108,7 +108,18 @@ namespace Bozo.ModularCharacters
             var height = HeightOffset + heelHeightOffset;
 
             System.SetHeight(height);
-            System.animator.SetFloat(animParameter, heelHeight);
+            
+            if (System.animator != null)
+            {
+                foreach (AnimatorControllerParameter param in System.animator.parameters)
+                {
+                    if (param.name == animParameter)
+                    {
+                        System.animator.SetFloat(animParameter, heelHeight);
+                        break;
+                    }
+                }
+            }
         }
 
         private void RemoveHeight()
@@ -117,7 +128,18 @@ namespace Bozo.ModularCharacters
             if (System == null) return;
 
             System.SetHeight(0);
-            System.animator.SetFloat(animParameter, heelHeight);
+            
+            if (System.animator != null)
+            {
+                foreach (AnimatorControllerParameter param in System.animator.parameters)
+                {
+                    if (param.name == animParameter)
+                    {
+                        System.animator.SetFloat(animParameter, heelHeight);
+                        break;
+                    }
+                }
+            }
         }
     }
 }

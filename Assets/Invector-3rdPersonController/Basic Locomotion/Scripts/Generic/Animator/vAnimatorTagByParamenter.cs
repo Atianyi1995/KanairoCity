@@ -1,4 +1,7 @@
-﻿using UnityEngine;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 namespace Invector.vEventSystems
 {
     public class vAnimatorTagByParamenter : vAnimatorTag
@@ -20,8 +23,8 @@ namespace Invector.vEventSystems
         [vCheckProperty("paramenterType", ParamenterType.Float, hideInInspector = true)]
         public float floatValue;
         [vCheckProperty("paramenterType", ParamenterType.Int, hideInInspector = true)]
-        public int intValue;
-        [vCheckProperty("paramenterType", ParamenterType.Bool, hideInInspector = true, invertResult = true)]
+        public int intValue;     
+        [vCheckProperty("paramenterType", ParamenterType.Bool, hideInInspector = true,invertResult =true)]
         public NumberCompare compare;
         [vReadOnly] public bool tagAdded;
         vAnimatorParameter paramenter;
@@ -33,11 +36,11 @@ namespace Invector.vEventSystems
         }
         public override void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
         {
-            base.OnStateUpdate(animator, stateInfo, layerIndex);
-            CheckForParamenter(animator, layerIndex);
+            base.OnStateUpdate(animator, stateInfo, layerIndex);           
+            CheckForParamenter(animator,layerIndex);
         }
-
-        private void CheckForParamenter(Animator animator, int layerIndex)
+       
+        private void CheckForParamenter(Animator animator,int layerIndex)
         {
             if (paramenter.isValid)
             {
@@ -53,22 +56,22 @@ namespace Invector.vEventSystems
                         isValid = CompareNumber(intValue, animator.GetInteger(paramenter), compare);
                         break;
                     case ParamenterType.Bool:
-                        isValid = boolValue == animator.GetBool(paramenter);
+                        isValid =   boolValue == animator.GetBool(paramenter);
                         break;
 
                 }
-
+              
                 if (isValid != tagAdded)
                 {
                     tagAdded = isValid;
                     if (isValid)
                     {
-
+                       
                         AddTags(layerIndex);
                     }
                     else
                     {
-
+                      
                         RemoveTags(layerIndex);
                     }
                 }
@@ -79,7 +82,7 @@ namespace Invector.vEventSystems
         {
             if (stateInfos != null)
             {
-
+               
                 for (int i = 0; i < tags.Length; i++)
                 {
                     for (int a = 0; a < stateInfos.Count; a++)
@@ -94,7 +97,7 @@ namespace Invector.vEventSystems
         {
             if (stateInfos != null)
             {
-
+               
                 for (int i = 0; i < tags.Length; i++)
                 {
                     for (int a = 0; a < stateInfos.Count; a++)
@@ -105,14 +108,14 @@ namespace Invector.vEventSystems
             }
         }
 
-        bool CompareNumber(float a, float b, NumberCompare compare)
+        bool CompareNumber(float a,float b,NumberCompare compare)
         {
             switch (compare)
             {
                 case NumberCompare.Equals:
                     Debug.Log($"{b} == {a}");
                     return b == a;
-
+                  
                 case NumberCompare.Greater:
                     Debug.Log($"{b} > {a}");
                     return b > a;
@@ -125,12 +128,12 @@ namespace Invector.vEventSystems
 
         public override void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
         {
-            if (tagAdded)
+            if(tagAdded)
             {
                 tagAdded = false;
                 base.OnStateExit(animator, stateInfo, layerIndex);
             }
-
+           
         }
 
     }

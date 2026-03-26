@@ -11,7 +11,7 @@ namespace Invector
     }
     public static class vExtensions
     {
-        public static void DebugPoint(this Vector3 vector, Color color, float time, float size = 0.25f)
+        public static void DebugPoint(this Vector3 vector, Color color,float time,float size=0.25f)
         {
             Debug.DrawRay(vector, Vector3.right * size, color, time);
             Debug.DrawRay(vector, Vector3.left * size, color, time);
@@ -20,7 +20,7 @@ namespace Invector
             Debug.DrawRay(vector, Vector3.up * size, color, time);
             Debug.DrawRay(vector, Vector3.down * size, color, time);
         }
-        public static void DebugPoint(this Vector3 vector, Color color, float size = 0.25f)
+        public static void DebugPoint(this Vector3 vector,Color color, float size = 0.25f)
         {
             Debug.DrawRay(vector, Vector3.right * size, color);
             Debug.DrawRay(vector, Vector3.left * size, color);
@@ -115,6 +115,8 @@ namespace Invector
             }
             return newPts;
         }
+
+
 
         public static float GetLenght(this UnityEngine.AI.NavMeshPath path)
         {
@@ -248,6 +250,7 @@ namespace Invector
             return null;
         }
 
+      
         /// <summary>
         /// Normalized the angle. between -180 and 180 degrees
         /// </summary>
@@ -290,24 +293,21 @@ namespace Invector
         {
             return otherVector - vector;
         }
-
         public static Vector3 AngleFormOtherDirection(this Vector3 directionA, Vector3 directionB)
         {
-            if (directionA.normalized.magnitude == 0 || directionB.normalized.magnitude == 0) return Vector3.zero;
+            if (directionA.normalized.magnitude == 0||directionB.normalized.magnitude==0) return Vector3.zero;
             return Quaternion.LookRotation(directionA).eulerAngles.AngleFormOtherEuler(Quaternion.LookRotation(directionB).eulerAngles);
         }
 
         public static Vector3 AngleFormOtherDirection(this Vector3 directionA, Vector3 directionB, Vector3 up)
         {
-            return Quaternion.LookRotation(directionA, up).eulerAngles.AngleFormOtherEuler(Quaternion.LookRotation(directionB, up).eulerAngles);
+            return Quaternion.LookRotation(directionA,up).eulerAngles.AngleFormOtherEuler(Quaternion.LookRotation(directionB,up).eulerAngles);
         }
-
         public static Vector3 AngleFormOtherEuler(this Vector3 eulerA, Vector3 eulerB)
         {
             Vector3 angles = eulerA.NormalizeAngle().Difference(eulerB.NormalizeAngle()).NormalizeAngle();
             return angles;
         }
-
         public static string ToStringColor(this bool value)
         {
             if (value) return "<color=green>YES</color>";
@@ -425,7 +425,6 @@ namespace Invector
         {
             return (T)Enum.Parse(typeof(T), value, ignoreCase);
         }
-
         public static bool TryGetField(this object obj, string name, out FieldInfo info)
         {
             Type t = obj.GetType();
@@ -448,24 +447,16 @@ namespace Invector
 
             return found;
         }
-
         public static bool Contains<T>(this Enum value, Enum lookingForFlag) where T : struct
         {
             int intValue = (int)(object)value;
             int intLookingForFlag = (int)(object)lookingForFlag;
             return ((intValue & intLookingForFlag) == intLookingForFlag);
         }
-
-        public static Vector3 DotVector(this Vector3 _vector, Vector3 _direction)
-        {
-            //Normalize vector if necessary;
-            if (_direction.sqrMagnitude != 1)
-                _direction.Normalize();
-
-            float _amount = Vector3.Dot(_vector, _direction);
-
-            return _direction * _amount;
-        }
+        /// <summary>
+        /// Load all <see cref="vCharacterController.vActions.IActionController"/> and derivatives  in character gameObject to register to events <see cref="vCharacterController.vCharacter.onActionEnter"/>,<see cref="vCharacterController.vCharacter.onActionStay"/> and <see cref="vCharacterController.vCharacter.onActionExit"/>.
+        /// </summary>
+        /// <param name="character">Target <seealso cref="vCharacterController.vCharacter>"/></param>
     }
 
     /// <summary>
@@ -518,9 +509,10 @@ namespace Invector
                        : Time.unscaledTime;
             }
         }
+
         public static float GetNormalizedTime(this Animator animator, int layer, int round = 2)
         {
-            return (float)System.Math.Round(((animator.IsInTransition(layer) ? animator.GetNextAnimatorStateInfo(layer).normalizedTime : animator.GetCurrentAnimatorStateInfo(layer).normalizedTime) % 1), round);
+            return (float)System.Math.Round(((animator.IsInTransition(layer) ? animator.GetNextAnimatorStateInfo(layer).normalizedTime : animator.GetCurrentAnimatorStateInfo(layer).normalizedTime)%1), round);
         }
     }
 }

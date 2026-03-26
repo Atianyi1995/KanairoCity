@@ -1,4 +1,4 @@
-#if !UNITY_WEBGL
+#if !UNITY_WEBGL || UNITY_EDITOR
 namespace player2_sdk
 {
     using System;
@@ -16,14 +16,14 @@ namespace player2_sdk
             // Validate input parameters
             if (string.IsNullOrEmpty(dataUrl))
             {
-                Debug.LogError($"Cannot play audio for {identifier}: dataUrl is null or empty");
+                NpcManager.LogError($"Cannot play audio for {identifier}: dataUrl is null or empty");
                 yield break;
             }
 
             // Check if this is a valid data URL format
             if (!dataUrl.StartsWith("data:"))
             {
-                Debug.LogError($"Cannot play audio for {identifier}: invalid data URL format (missing 'data:' prefix)");
+                NpcManager.LogError($"Cannot play audio for {identifier}: invalid data URL format (missing 'data:' prefix)");
                 yield break;
             }
 
@@ -31,7 +31,7 @@ namespace player2_sdk
             var commaIndex = dataUrl.IndexOf(',');
             if (commaIndex == -1 || commaIndex == dataUrl.Length - 1)
             {
-                Debug.LogError(
+                NpcManager.LogError(
                     $"Cannot play audio for {identifier}: invalid data URL format (missing comma or no data after comma)");
                 yield break;
             }
@@ -42,7 +42,7 @@ namespace player2_sdk
             // Validate that we have base64 data
             if (string.IsNullOrEmpty(base64String))
             {
-                Debug.LogError($"Cannot play audio for {identifier}: no base64 data found in data URL");
+                NpcManager.LogError($"Cannot play audio for {identifier}: no base64 data found in data URL");
                 yield break;
             }
 
@@ -50,7 +50,7 @@ namespace player2_sdk
             // Additional validation: check for valid base64 characters
             if (!IsValidBase64String(base64String))
             {
-                Debug.LogError($"Cannot play audio for {identifier}: extracted string is not valid Base64");
+                NpcManager.LogError($"Cannot play audio for {identifier}: extracted string is not valid Base64");
                 yield break;
             }
 
@@ -67,7 +67,7 @@ namespace player2_sdk
             {
                 // Log additional context for Base64 decoding failures
                 var base64Preview = base64String.Length > 50 ? base64String.Substring(0, 50) + "..." : base64String;
-                Debug.LogError(
+                NpcManager.LogError(
                     $"Cannot play audio for {identifier}: Base64 decoding failed: {ex.Message}. Base64 data length: {base64String.Length}, Preview: {base64Preview}");
                 yield break;
             }
@@ -81,7 +81,7 @@ namespace player2_sdk
             }
             catch (Exception ex)
             {
-                Debug.LogError(
+                NpcManager.LogError(
                     $"Cannot play audio for {identifier}: failed to write audio data to temp file: {ex.Message}");
                 yield break;
             }
@@ -93,46 +93,51 @@ namespace player2_sdk
 
                 if (request.result == UnityWebRequest.Result.Success)
                 {
+                    AudioClip clip = null;
                     try
                     {
-                        var clip = DownloadHandlerAudioClip.GetContent(request);
-                        if (clip != null)
-                        {
-                            audioSource.clip = clip;
-                            audioSource.Play();
-                            Debug.Log($"Playing audio for {identifier} (duration: {clip.length}s)");
-                        }
-                        else
-                        {
-                            Debug.LogError(
-                                $"Cannot play audio for {identifier}: failed to create AudioClip from downloaded data");
-                        }
+                        clip = DownloadHandlerAudioClip.GetContent(request);
                     }
                     catch (Exception ex)
                     {
-                        Debug.LogError($"Cannot play audio for {identifier}: error setting up AudioClip: {ex.Message}");
+                        NpcManager.LogError($"Cannot play audio for {identifier}: error setting up AudioClip: {ex.Message}");
+                    }
+
+                    if (clip != null)
+                    {
+                        audioSource.clip = clip;
+                        audioSource.Play();
+                        NpcManager.Log($"Playing audio for {identifier} (duration: {clip.length}s)");
+
+                        // Wait for the clip to finish playing before cleaning up
+                        yield return new WaitWhile(() => audioSource != null && audioSource.isPlaying);
+                    }
+                    else
+                    {
+                        NpcManager.LogError(
+                            $"Cannot play audio for {identifier}: failed to create AudioClip from downloaded data");
                     }
                 }
                 else
                 {
                     var errorDetails = request.error ?? "Unknown UnityWebRequest error";
-                    Debug.LogError($"Cannot play audio for {identifier}: failed to load audio file - {errorDetails}");
+                    NpcManager.LogError($"Cannot play audio for {identifier}: failed to load audio file - {errorDetails}");
                 }
             }
 
-            // Cleanup after 5 seconds (with error handling)
-            yield return new WaitForSeconds(5f);
+            // Cleanup (with a small safety buffer)
+            yield return new WaitForSeconds(1f);
             try
             {
                 if (File.Exists(tempPath))
                 {
                     File.Delete(tempPath);
-                    Debug.Log($"Cleaned up temporary audio file for {identifier}");
+                    NpcManager.Log($"Cleaned up temporary audio file for {identifier}");
                 }
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"Failed to cleanup temporary audio file for {identifier}: {ex.Message}");
+                NpcManager.LogWarning($"Failed to cleanup temporary audio file for {identifier}: {ex.Message}");
             }
         }
 
@@ -150,7 +155,7 @@ namespace player2_sdk
             if (missingPadding != 4) // Only add padding if needed
             {
                 base64String = base64String + new string('=', missingPadding);
-                Debug.Log($"Fixed Base64 padding by adding {missingPadding} character(s)");
+                NpcManager.Log($"Fixed Base64 padding by adding {missingPadding} character(s)");
             }
 
             return base64String;

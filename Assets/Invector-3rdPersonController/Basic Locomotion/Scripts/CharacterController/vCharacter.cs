@@ -92,7 +92,7 @@ namespace Invector.vCharacterController
                 triggerRecoilHash = new vAnimatorParameter(animator, "TriggerRecoil");
             }
 
-            this.LoadActionControllers(debugActionListener);
+            //this.LoadActionControllers(debugActionListener);
         }
 
         public virtual void ResetRagdoll()

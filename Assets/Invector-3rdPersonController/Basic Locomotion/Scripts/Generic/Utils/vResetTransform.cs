@@ -1,8 +1,10 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace Invector.Utils
 {
-    [vClassHeader("Reset Transform", useHelpBox = true, helpBoxText = "Use this to Reset transformation values<b><color=red>\nPosition Zero\nRotation Zero\nScale One</color> </b>", openClose = false)]
+    [vClassHeader("Reset Transform",useHelpBox =true, helpBoxText = "Use this to Reset transformation values<b><color=red>\nPosition Zero\nRotation Zero\nScale One</color> </b>", openClose =false)]
     public class vResetTransform : vMonoBehaviour
     {
         public bool resetPositionOnStart;
@@ -30,8 +32,8 @@ namespace Invector.Utils
             else transform.position = Vector3.zero;
         }
         public void ResetScale()
-        {
-            transform.localScale = Vector3.one;
+        {     
+            transform.localScale = Vector3.one;        
         }
     }
 

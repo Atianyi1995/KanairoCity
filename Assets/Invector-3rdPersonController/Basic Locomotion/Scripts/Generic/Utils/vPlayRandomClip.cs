@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections;
 namespace Invector
 {
     [RequireComponent(typeof(AudioSource))]

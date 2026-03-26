@@ -33,7 +33,7 @@ namespace Invector
            
             if (_fT == null)
             {
-                Debug.Log(gameObject.name + " can't find the FootStepFromTexture");
+               // Debug.Log(gameObject.name + " can't find the FootStepFromTexture");
                 gameObject.SetActive(false);
             }
             else

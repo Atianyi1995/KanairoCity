@@ -43,11 +43,36 @@ namespace KanairoCity.Systems.NPCs
             }
         }
 
+        private float wanderTimer = 0f;
+        public float wanderInterval = 5f;
+        public float wanderRadius = 10f;
+
         protected virtual void Update()
         {
             UpdateNeeds();
             UpdateState();
             UpdateAnimations();
+            
+            if (currentState == NPCState.Idle)
+            {
+                wanderTimer += Time.deltaTime;
+                if (wanderTimer >= wanderInterval)
+                {
+                    Wander();
+                    wanderTimer = 0f;
+                }
+            }
+        }
+
+        private void Wander()
+        {
+            Vector3 randomDirection = Random.insideUnitSphere * wanderRadius;
+            randomDirection += transform.position;
+            NavMeshHit hit;
+            if (NavMesh.SamplePosition(randomDirection, out hit, wanderRadius, agent.areaMask))
+            {
+                MoveTo(hit.position);
+            }
         }
 
         private void UpdateNeeds()
@@ -83,7 +108,7 @@ namespace KanairoCity.Systems.NPCs
             if (animator != null && agent != null)
             {
                 float speed = agent.velocity.magnitude;
-                animator.SetFloat("Speed", speed);
+                animator.SetBool("isWalk", speed > 0.1f);
             }
         }
 

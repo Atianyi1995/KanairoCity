@@ -205,7 +205,11 @@ namespace Bozo.ModularCharacters
         {
             for (int i = 0; i < loadData.bodyModsKeys.Count; i++)
             {
-                outfitSystem.bodyModifiers[loadData.bodyModsKeys[i]].SetData(loadData.bodyMods[i]);
+                string modKey = loadData.bodyModsKeys[i];
+                if (outfitSystem.bodyModifiers.TryGetValue(modKey, out BodyShapeModifier modifier))
+                {
+                    modifier.SetData(loadData.bodyMods[i]);
+                }
             }
         }
 

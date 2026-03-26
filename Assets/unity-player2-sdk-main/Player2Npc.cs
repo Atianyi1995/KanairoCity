@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+#if UNITY_EDITOR
 using JetBrains.Annotations;
+#endif
 using Newtonsoft.Json;
 using TMPro;
 using UnityEngine;
@@ -35,8 +37,14 @@ namespace player2_sdk
     {
         public string sender_name;
         public string sender_message;
-        [CanBeNull] public string game_state_info;
-        [CanBeNull] public string tts; // Nullable by convention / attribute
+#if UNITY_EDITOR
+        [CanBeNull]
+#endif
+        public string game_state_info;
+#if UNITY_EDITOR
+        [CanBeNull]
+#endif
+        public string tts; // Nullable by convention / attribute
     }
 
     public class Player2Npc : MonoBehaviour
@@ -48,11 +56,10 @@ namespace player2_sdk
         [Header("NPC Configuration")] [SerializeField]
         public bool customNpc;
 
-        [RemoveIfCustomNpc] [SerializeField] private string shortName = "Victor";
+        [SerializeField] private string shortName = "Victor";
 
-        [RemoveIfCustomNpc] [SerializeField] private string fullName = "Victor J. Johnson";
+        [SerializeField] private string fullName = "Victor J. Johnson";
 
-        [RemoveIfCustomNpc]
         [Tooltip(
             "A description of the NPC, written in first person, used for the LLM to understand the character better.")]
         [SerializeField]
@@ -65,7 +72,6 @@ namespace player2_sdk
 
         // Use the TTSVoice attribute in Editor for dropdown functionality
 
-        [RemoveIfCustomNpc]
         [Tooltip("The voice ID to use for TTS. Click 'Fetch' to load available voices from Player2 App.")]
 #if UNITY_EDITOR
         [TTSVoice]
@@ -97,10 +103,10 @@ namespace player2_sdk
 
         private async void Awake()
         {
-            Debug.Log("Starting Player2Npc with NPC: " + fullName);
+            NpcManager.Log("Starting Player2Npc with NPC: " + fullName);
             if (npcManager == null)
             {
-                Debug.LogError("Player2Npc requires an NpcManager reference. Please assign it in the inspector.", this);
+                NpcManager.LogError("Player2Npc requires an NpcManager reference. Please assign it in the inspector.");
                 return;
             }
 
@@ -128,7 +134,7 @@ namespace player2_sdk
                     _npcID = npcId;
                     outputMessage.text = "";
 
-                    Debug.Log($"Changed custom NPC to '{fullName}' with ID: {_npcID}");
+                    NpcManager.Log($"Changed custom NPC to '{fullName}' with ID: {_npcID}");
                 });
             }
             else
@@ -141,12 +147,13 @@ namespace player2_sdk
 
             if (inputField != null)
             {
-                inputField.onEndEdit.AddListener(OnChatMessageSubmitted);
-                inputField.onEndEdit.AddListener(_ => inputField.text = string.Empty);
+                // Removed auto-listeners to prevent multiple NPCs from responding at once.
+                // inputField.onEndEdit.AddListener(OnChatMessageSubmitted);
+                // inputField.onEndEdit.AddListener(_ => inputField.text = string.Empty);
             }
             else
             {
-                Debug.LogWarning("InputField not assigned on Player2Npc; chat input disabled.", this);
+                NpcManager.LogWarning("InputField not assigned on Player2Npc; chat input disabled.");
             }
 
             // Auto-fetch voices in Editor on first load
@@ -185,7 +192,7 @@ namespace player2_sdk
                 {
                     if (voices != null && voices.voices != null && voices.voices.Count > 0)
                     {
-                        Debug.Log($"Player2Npc: Auto-fetched {voices.voices.Count} TTS voices");
+                       // Debug.Log($"Player2Npc: Auto-fetched {voices.voices.Count} TTS voices");
 
                         // If the current voiceId is the default one and we have voices available,
                         // you could optionally set it to the first available voice
@@ -204,12 +211,13 @@ namespace player2_sdk
 
         public void ChangedCustomCharacter(Character character, string npcId)
         {
-            Debug.Log(character.name);
+           // Debug.Log(character.name);
             OnChangedCustomCharacter.Invoke(character, npcId);
         }
 
-        private void OnChatMessageSubmitted(string message)
+        public void OnChatMessageSubmitted(string message)
         {
+            if (outputMessage != null) outputMessage.text = "";
             _ = SendChatMessageAsync(message);
         }
 
@@ -217,24 +225,28 @@ namespace player2_sdk
         {
             if (npcManager == null)
             {
-                Debug.LogError("Player2Npc.SpawnNpcAsync called but npcManager is NOT assigned. Aborting spawn.");
+                NpcManager.LogError("Player2Npc.SpawnNpcAsync called but npcManager is NOT assigned. Aborting spawn.");
                 return;
             }
 
             // Ensure we have a valid API key before attempting to spawn (unless auth is bypassed for hosted scenarios)
             if (string.IsNullOrEmpty(npcManager.ApiKey) && !npcManager.ShouldSkipAuthentication())
             {
-                Debug.LogError(
+                NpcManager.LogError(
                     $"Cannot spawn NPC '{fullName}': No API key available. Please ensure authentication is completed first.");
                 return;
             }
 
             if (npcManager.ShouldSkipAuthentication())
-                Debug.Log($"Spawning NPC '{fullName}' in hosted mode (no API key required)");
+            {
+                NpcManager.Log($"Spawning NPC '{fullName}' in hosted mode (no API key required)");
+            }
             else
-                Debug.Log($"Spawning NPC '{fullName}' with API key authentication");
+            {
+                NpcManager.Log($"Spawning NPC '{fullName}' with API key authentication");
+            }
 
-            Debug.Log($"Spawning NPC '{fullName}' with voice ID: {voiceId}");
+            NpcManager.Log($"Spawning NPC '{fullName}' with voice ID: {voiceId}");
 
             var spawnData = new SpawnNpc
             {
@@ -253,7 +265,7 @@ namespace player2_sdk
             };
 
             var url = $"{npcManager.GetBaseUrl()}/npcs/spawn";
-            Debug.Log($"Spawning NPC at URL: {url}");
+            NpcManager.Log($"Spawning NPC at URL: {url}");
 
             var json = JsonConvert.SerializeObject(spawnData, npcManager.JsonSerializerSettings);
             var bodyRaw = Encoding.UTF8.GetBytes(json);
@@ -265,12 +277,12 @@ namespace player2_sdk
             // Skip authentication if running on player2.game domain (cookies will handle auth)
             if (!npcManager.ShouldSkipAuthentication())
             {
-                Debug.Log("Setting Authorization header with API key");
+                NpcManager.Log("Setting Authorization header with API key");
                 request.SetRequestHeader("Authorization", $"Bearer {npcManager.ApiKey}");
             }
             else
             {
-                Debug.Log("Skipping Authorization header (WebGL on player2.game domain - using cookies for auth)");
+                NpcManager.Log("Skipping Authorization header (WebGL on player2.game domain - using cookies for auth)");
             }
 
             request.SetRequestHeader("Content-Type", "application/json");
@@ -283,12 +295,12 @@ namespace player2_sdk
             if (request.result == UnityWebRequest.Result.Success)
             {
                 _npcID = request.downloadHandler.text.Trim('"');
-                Debug.Log($"NPC spawned successfully with ID: {_npcID}");
+                NpcManager.Log($"NPC spawned successfully with ID: {_npcID}");
 
                 if (!string.IsNullOrEmpty(_npcID) && npcManager != null)
                     npcManager.RegisterNpc(_npcID, outputMessage, gameObject);
                 else
-                    Debug.LogError($"Invalid NPC ID or null npcManager: ID={_npcID}, Manager={npcManager}");
+                    NpcManager.LogError($"Invalid NPC ID or null npcManager: ID={_npcID}, Manager={npcManager}");
             }
             else
             {
@@ -296,7 +308,7 @@ namespace player2_sdk
                 var traceInfo = !string.IsNullOrEmpty(traceId) ? $" (X-Player2-Trace-Id: {traceId})" : "";
                 var error =
                     $"Failed to spawn NPC: {request.error} - Response: {request.downloadHandler.text}{traceInfo}";
-                Debug.LogError(error);
+                NpcManager.LogError(error);
             }
         }
 
@@ -306,11 +318,11 @@ namespace player2_sdk
 
             try
             {
-                Debug.Log("Sending message to NPC: " + message);
+                NpcManager.Log("Sending message to NPC: " + message);
 
                 if (string.IsNullOrEmpty(_npcID))
                 {
-                    Debug.LogWarning("NPC ID is not set! Cannot send message.");
+                    NpcManager.LogWarning("NPC ID is not set! Cannot send message.");
                     return;
                 }
 
@@ -325,11 +337,11 @@ namespace player2_sdk
             }
             catch (OperationCanceledException)
             {
-                Debug.Log("Chat message send operation was cancelled");
+                NpcManager.Log("Chat message send operation was cancelled");
             }
             catch (Exception ex)
             {
-                Debug.LogError($"Unexpected error sending chat message: {ex.Message}");
+                NpcManager.LogError($"Unexpected error sending chat message: {ex.Message}");
             }
         }
 
@@ -337,14 +349,14 @@ namespace player2_sdk
         {
             if (npcManager == null)
             {
-                Debug.LogError("Cannot send chat request because npcManager is null.");
+                NpcManager.LogError("Cannot send chat request because npcManager is null.");
                 return;
             }
 
             // Ensure we have a valid API key before attempting to send chat (unless auth is bypassed for hosted scenarios)
             if (string.IsNullOrEmpty(npcManager.ApiKey) && !npcManager.ShouldSkipAuthentication())
             {
-                Debug.LogError(
+                NpcManager.LogError(
                     "Cannot send chat message: No API key available. Please ensure authentication is completed first.");
                 return;
             }
@@ -370,7 +382,7 @@ namespace player2_sdk
 
             if (request.result == UnityWebRequest.Result.Success)
             {
-                Debug.Log($"Message sent successfully to NPC {_npcID}");
+                NpcManager.Log($"Message sent successfully to NPC {_npcID}");
             }
             else
             {
@@ -378,7 +390,7 @@ namespace player2_sdk
                 var traceInfo = !string.IsNullOrEmpty(traceId) ? $" (X-Player2-Trace-Id: {traceId})" : "";
                 var error =
                     $"Failed to send message: {request.error} - Response: {request.downloadHandler.text}{traceInfo}";
-                Debug.LogError(error);
+                NpcManager.LogError(error);
             }
         }
     }

@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 namespace Invector.vCharacterController
 {
     public class vRagdollGenericTemplate : ScriptableObject

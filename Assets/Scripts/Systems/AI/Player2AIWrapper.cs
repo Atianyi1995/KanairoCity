@@ -18,6 +18,9 @@ namespace KanairoCity.Systems.AI
         [Header("Player2 References")]
         public player2_sdk.Player2Npc p2Npc;
         
+        [Header("FSM Flags")]
+        public bool isConvinced = false;
+        
         private void Awake()
         {
             if (p2Npc == null) p2Npc = GetComponent<player2_sdk.Player2Npc>();
@@ -29,15 +32,16 @@ namespace KanairoCity.Systems.AI
             string lowerResponse = response.ToLower();
             
             // Logic to check if AI convinced NPC to do something
-            if (lowerResponse.Contains("fine, i'll buy") || lowerResponse.Contains("okay, i'm getting in"))
+            if (lowerResponse.Contains("fine, i'll buy") || lowerResponse.Contains("okay, i'm getting in") || lowerResponse.Contains("let's go"))
             {
-                Debug.Log($"{npc.name} was convinced by the Player!");
-                // Trigger success logic (e.g., Passenger boards, Customer buys)
+                isConvinced = true;
+                player2_sdk.NpcManager.Log($"{npc.name} was convinced by the Player!");
             }
             
             if (lowerResponse.Contains("walk away") || lowerResponse.Contains("not interested"))
             {
-                Debug.Log($"{npc.name} is walking away.");
+                isConvinced = false;
+                player2_sdk.NpcManager.Log($"{npc.name} is walking away.");
             }
         }
     }

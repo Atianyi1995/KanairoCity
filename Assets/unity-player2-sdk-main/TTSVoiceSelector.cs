@@ -98,21 +98,21 @@ namespace player2_sdk
                         _lastFetchTime = Time.realtimeSinceStartup;
                         FetchError = null;
 
-                        Debug.Log($"TTSVoiceManager: Successfully fetched {CachedVoices?.voices?.Count ?? 0} voices");
+                       // Debug.Log($"TTSVoiceManager: Successfully fetched {CachedVoices?.voices?.Count ?? 0} voices");
 
                         onComplete?.Invoke(CachedVoices);
                     }
                     catch (Exception ex)
                     {
                         FetchError = $"Failed to parse voices response: {ex.Message}";
-                        Debug.LogError($"TTSVoiceManager: {FetchError}");
+                      //  Debug.LogError($"TTSVoiceManager: {FetchError}");
                         onComplete?.Invoke(null);
                     }
                 }
                 else
                 {
                     FetchError = $"Failed to fetch voices: {request.error}";
-                    Debug.LogWarning($"TTSVoiceManager: {FetchError} (Is Player2 App running on localhost:4315?)");
+                   // Debug.LogWarning($"TTSVoiceManager: {FetchError} (Is Player2 App running on localhost:4315?)");
                     onComplete?.Invoke(null);
                 }
             }
@@ -147,16 +147,6 @@ namespace player2_sdk
                 EditorGUI.PropertyField(position, property, label);
                 return;
             }
-
-            if ((TTSVoiceManager.CachedVoices?.voices.Count ?? 0) == 0 && !TTSVoiceManager.IsFetching)
-            {
-                if (string.IsNullOrEmpty(property.stringValue))
-                    property.stringValue = EditorGUI.TextField(position, label.text, "");
-                else
-                    property.stringValue = EditorGUI.TextField(position, label.text, property.stringValue);
-                return;
-            }
-
 
             EditorGUI.BeginProperty(position, label, property);
 
@@ -229,10 +219,15 @@ namespace player2_sdk
                 // No voices cached, show disabled dropdown with placeholder text
                 EditorGUI.BeginDisabledGroup(true);
                 EditorGUI.Popup(dropdownRect, 0, new[] { "No voices loaded - click Fetch" });
-                TTSVoiceManager.FetchVoices();
+                
+                // Auto-fetch if not already fetching and no voices loaded
+                if (!TTSVoiceManager.IsFetching && (TTSVoiceManager.CachedVoices?.voices.Count ?? 0) == 0)
+                {
+                    TTSVoiceManager.FetchVoices();
+                }
+                
                 EditorGUI.EndDisabledGroup();
             }
-
 
             // Draw refresh button
             EditorGUI.BeginDisabledGroup(TTSVoiceManager.IsFetching);

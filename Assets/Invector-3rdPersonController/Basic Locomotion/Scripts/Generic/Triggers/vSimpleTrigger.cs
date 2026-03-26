@@ -5,7 +5,7 @@ using UnityEngine.Events;
 
 namespace Invector
 {
- 
+    [RequireComponent(typeof(BoxCollider))]
     [vClassHeader("SimpleTrigger", openClose = false, useHelpBox = true, helpBoxText = "Tags and Layer To Detect : Use this to filter tags and layer that can interact with trigger, Select Nothing  to ignore filter")]
     public class vSimpleTrigger : vMonoBehaviour
     {
@@ -25,22 +25,22 @@ namespace Invector
         protected bool inCollision;
         protected bool triggerStay;
         protected Collider other;
-        protected Collider _selfCollider;
+        protected BoxCollider _selfCollider;
         public void ToggleGizmos()
         {
             drawGizmos = !drawGizmos;
         }
-        public virtual Collider selfCollider
+        public virtual BoxCollider selfCollider
         {
             get
             {
-                if (!_selfCollider && transform.GetComponent<Collider>() == null)
+                if (!_selfCollider && transform.GetComponent<BoxCollider>() == null)
                 {
                     _selfCollider = gameObject.AddComponent<BoxCollider>();
                 }
                 else if (!_selfCollider)
                 {
-                    _selfCollider = transform.GetComponent<Collider>();
+                    _selfCollider = transform.GetComponent<BoxCollider>();
                 }
 
                 return _selfCollider;
@@ -59,51 +59,20 @@ namespace Invector
             }
 
             Gizmos.matrix = Matrix4x4.TRS(transform.position, transform.rotation, (transform.lossyScale));
-            Vector3 position = transform.InverseTransformPoint(selfCollider.bounds.center);
-            Vector3 size = GetColliderSize();           
-          
+            Vector3 position = selfCollider.center;
+            Vector3 size = Vector3.one;
+            size.x *= selfCollider.size.x;
+            size.y *= selfCollider.size.y;
+            size.z *= selfCollider.size.z;
+            Gizmos.color = Color.green * 0.8f;
+            Gizmos.DrawWireCube(position, size);
+
             Color red = new Color(1, 0, 0, 0.2f);
             Color green = new Color(0, 1, 0, 0.2f);
             Gizmos.color = inCollision && Application.isPlaying ? red : green;
-
-
-            if (selfCollider is BoxCollider)
-               Gizmos.DrawCube(position, size);
-            else if (selfCollider is SphereCollider)
-            {
-                Gizmos.DrawSphere(position, (selfCollider as SphereCollider).radius);
-            }
-            else if (selfCollider is CapsuleCollider)
-            {
-                Gizmos.DrawCube(position, size * 2);
-            }
-            else if(selfCollider is MeshCollider)
-            {
-               
-              
-                Gizmos.DrawMesh((selfCollider as MeshCollider).sharedMesh, position);
-            }
+            Gizmos.DrawCube(position, size);
         }
-        Vector3 GetColliderSize()
-        {
-            if (selfCollider is BoxCollider)
-            {
-                return (selfCollider as BoxCollider).size;
-            }
-            else if(selfCollider is SphereCollider)
-            {
-                return  Vector3.one;
-            }
-            else if (selfCollider is CapsuleCollider)
-            {
-                var size = Vector3.zero;
-                size.x = (selfCollider as CapsuleCollider).radius;
-                size.z = (selfCollider as CapsuleCollider).radius;
-                size.y = (selfCollider as CapsuleCollider).height*0.5f;
-                return size;
-            }
-            return Vector3.one;
-        }
+
         protected virtual void Start()
         {
             inCollision = false;

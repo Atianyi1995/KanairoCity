@@ -266,8 +266,7 @@ namespace Invector.vCharacterController
                             if (bodyPart.rigidbody != null)
                             {
                                 bodyPart.rigidbody.isKinematic = true;
-                                // COMMENTED TO UNLOCK CUSTOM TAG FOR BODYPARTS
-                                //c.tag = gameObject.tag;
+                                c.tag = gameObject.tag;
                             }
                             bodyParts.Add(bodyPart);
                         }

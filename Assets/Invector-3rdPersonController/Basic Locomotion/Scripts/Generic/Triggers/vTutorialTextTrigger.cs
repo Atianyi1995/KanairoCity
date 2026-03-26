@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using UnityEngine;
 using UnityEngine.UI;
 namespace Invector
 {
@@ -9,7 +10,7 @@ namespace Invector
         public Text _textUI;
         public GameObject painel;
 
-        protected virtual void OnTriggerEnter(Collider other)
+        private void OnTriggerEnter(Collider other)
         {
             if (other.gameObject.CompareTag("Player"))
             {
@@ -17,14 +18,14 @@ namespace Invector
             }
         }
 
-        public virtual void EnableTutorialPanel()
+        public void EnableTutorialPanel()
         {
             painel.SetActive(true);
             _textUI.gameObject.SetActive(true);
             _textUI.text = text;
         }
 
-        protected virtual void OnTriggerExit(Collider other)
+        private void OnTriggerExit(Collider other)
         {
             if (other.gameObject.CompareTag("Player"))
             {
@@ -32,7 +33,7 @@ namespace Invector
             }
         }
 
-        public virtual void DisableTutorialPanel()
+        public void DisableTutorialPanel()
         {
             painel.SetActive(false);
             _textUI.gameObject.SetActive(false);

@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 namespace Invector
 {
@@ -18,13 +19,13 @@ namespace Invector
         public List<vDamageModifier> modifiers;
         public UnityEngine.Events.UnityEvent onAllModifiersIsBroken;
 
-
+      
 
         protected vIHealthController healthController = null;
 
         protected virtual void Awake()
         {
-            Init();
+            Init();          
         }
 
         protected void Init()

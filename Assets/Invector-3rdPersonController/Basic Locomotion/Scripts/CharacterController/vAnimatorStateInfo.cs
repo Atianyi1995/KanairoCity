@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Invector.vEventSystems
@@ -72,7 +73,7 @@ namespace Invector.vEventSystems
             for (int i = 0; i < stateInfos.Length; i++)
             {
                 var stateInfo = stateInfos[i];
-                if (stateInfo != null)
+                if(stateInfo!=null)
                 {
                     stateInfo.tags.Clear();
                     stateInfo.normalizedTime = 0;
@@ -88,7 +89,7 @@ namespace Invector.vEventSystems
                 bhv[i].AddStateInfoListener(this);
 
             }
-
+           
             if (debug)
             {
                 Debug.Log($"Listeners Registered", animator);

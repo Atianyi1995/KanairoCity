@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class vDebugUtils : MonoBehaviour
@@ -12,7 +13,7 @@ public class vDebugUtils : MonoBehaviour
     public float displayMessageTime = 5f;
     enum MessageType
     {
-        Normal, Warning, Error
+        Normal,Warning,Error
     }
     class DebugMessage
     {
@@ -29,7 +30,7 @@ public class vDebugUtils : MonoBehaviour
             this.duration = duration;
             timeString = System.DateTime.Now.ToString(@"HH\:mm\:ss");
         }
-        public bool isAlive => startTime + duration > Time.time;
+        public bool isAlive => startTime+duration > Time.time;
     }
     private void Start()
     {
@@ -59,7 +60,7 @@ public class vDebugUtils : MonoBehaviour
     public void PrintMessage(string message)
     {
         Debug.Log(message);
-        debugMessages.Add(new DebugMessage(message, Time.time, displayMessageTime, MessageType.Normal));
+        debugMessages.Add(new DebugMessage(message,Time.time,displayMessageTime, MessageType.Normal));
         scrool.y = lastRectPosition;
     }
     public void PrintMessageWarning(string message)
@@ -71,7 +72,7 @@ public class vDebugUtils : MonoBehaviour
     public void PrintMessageError(string message)
     {
         Debug.LogError(message);
-        debugMessages.Add(new DebugMessage(message, Time.time, displayMessageTime, MessageType.Error));
+        debugMessages.Add(new DebugMessage(message, Time.time , displayMessageTime, MessageType.Error));
         scrool.y = lastRectPosition;
     }
 
@@ -81,17 +82,17 @@ public class vDebugUtils : MonoBehaviour
     private void OnGUI()
     {
         GUILayout.Label($"TimeScale:{Time.timeScale.ToString()}");
-
+        
         if (debugMessages.Count > 0)
         {
-            if (messageStyle == null)
+            if(messageStyle ==null)
             {
                 messageStyle = new GUIStyle(GUI.skin.box);
                 messageStyle.wordWrap = true;
                 messageStyle.alignment = TextAnchor.MiddleLeft;
                 messageStyle.fontSize = 10;
             }
-            scrool = GUILayout.BeginScrollView(scrool, "box", GUILayout.MinHeight(100), GUILayout.Width(Screen.width * 0.2f), GUILayout.MaxHeight(Screen.height * 0.8f));
+            scrool= GUILayout.BeginScrollView(scrool, "box",GUILayout.MinHeight(100),GUILayout.Width(Screen.width*0.2f), GUILayout.MaxHeight(Screen.height*0.8f));
             for (int i = 0; i < debugMessages.Count; i++)
             {
                 var m = debugMessages[i];
@@ -99,11 +100,11 @@ public class vDebugUtils : MonoBehaviour
                 {
                     var t = m.messageType;
 
+                   
 
+                    GUI.color = t == MessageType.Warning? Color.yellow : t== MessageType.Error? Color.red:Color.white;
 
-                    GUI.color = t == MessageType.Warning ? Color.yellow : t == MessageType.Error ? Color.red : Color.white;
-
-                    GUILayout.Label(string.Format("[{0}] : {1}", m.timeString, m.message), messageStyle);
+                    GUILayout.Label(string.Format("[{0}] : {1}",m.timeString, m.message), messageStyle);
                     lastRectPosition = GUILayoutUtility.GetLastRect().y;
                 }
                 else

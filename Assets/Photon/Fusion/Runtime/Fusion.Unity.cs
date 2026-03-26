@@ -1764,7 +1764,9 @@ namespace Fusion {
 namespace Fusion {
   using System;
   using System.Diagnostics;
+#if UNITY_EDITOR
   using JetBrains.Annotations;
+#endif
 #if FUSION_ENABLE_MPPM
   using System.Collections.Generic;
   using System.IO;
@@ -1816,7 +1818,9 @@ namespace Fusion {
     /// <summary>
     /// If <see cref="Status"/> is <see cref="FusionMppmStatus.MainInstance"/>, this static field can be used to send commands.
     /// </summary>
+#if UNITY_EDITOR
     [CanBeNull]
+#endif
     public static readonly FusionMppm MainEditor = null;
 
     /// <summary>

@@ -76,8 +76,15 @@ namespace Bozo.ModularCharacters
                 boneName = boneName.Replace("_l", "_r");
                 var bones = system.GetBones();
 
-                mirror = bones[boneName];
-                initalMirrorPosition = mirror.localPosition;
+                if (bones.TryGetValue(boneName, out Transform mirrorBone))
+                {
+                    mirror = mirrorBone;
+                    initalMirrorPosition = mirror.localPosition;
+                }
+                else
+                {
+                    MirrorTransform = false;
+                }
             }
 
             initalized = true;

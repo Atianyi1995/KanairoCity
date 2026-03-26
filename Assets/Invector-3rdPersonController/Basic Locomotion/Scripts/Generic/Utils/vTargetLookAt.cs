@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 namespace Invector.Utils
 {
     public class vTargetLookAt : MonoBehaviour
@@ -12,9 +14,9 @@ namespace Invector.Utils
         void Update()
         {
             if (!target) return;
-            var dir = target.position + Vector3.up * offsetHeight - transform.position;
+            var dir = target.position+Vector3.up*offsetHeight - transform.position;
             Quaternion rotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
-            if (!limitDistance || dir.magnitude > minDistanceToLook)
+            if(!limitDistance|| dir.magnitude>minDistanceToLook )
                 transform.rotation = Quaternion.Lerp(transform.rotation, rotation, smooth * Time.deltaTime);
         }
     }

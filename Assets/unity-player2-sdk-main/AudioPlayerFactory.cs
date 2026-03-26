@@ -15,7 +15,7 @@ namespace player2_sdk
             if (_instance != null)
                 return _instance;
 
-#if UNITY_WEBGL
+#if UNITY_WEBGL && !UNITY_EDITOR
             _instance = new WebGLAudioPlayer();
 #else
             _instance = new DefaultAudioPlayer();

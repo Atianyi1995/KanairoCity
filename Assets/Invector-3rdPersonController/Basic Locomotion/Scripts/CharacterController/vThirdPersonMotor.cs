@@ -1603,7 +1603,7 @@ namespace Invector.vCharacterController
             if (rayHasDetectedHit)
             {
                 validSnapPoint = true;
-                float hitDistance = (origin - groundHit.point).DotVector(direction).magnitude;
+                float hitDistance = Vector3.Project(origin - groundHit.point, direction).magnitude;
                 snapDistance = hitDistance;
                 Vector3 relativeGroundPosition = transform.InverseTransformPoint(groundHit.point);
                 groundDistance = Mathf.Max(0, relativeGroundPosition.y * -1);
@@ -1629,7 +1629,7 @@ namespace Invector.vCharacterController
 
                     Vector3 hitPosition = groundHit.point;
 
-                    float hitDistance = (origin - hitPosition).DotVector(direction).magnitude /*+hitDirection.magnitude*/ ;
+                    float hitDistance = Vector3.Project(origin - hitPosition, direction).magnitude /*+hitDirection.magnitude*/ ;
                     var _snapDistance = hitDistance;
 
                     Vector3 relativeGroundPosition = transform.InverseTransformPoint(hitPosition);

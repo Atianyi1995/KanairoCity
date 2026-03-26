@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections;
 namespace Invector
 {
     [System.AttributeUsage(System.AttributeTargets.Field, AllowMultiple = true, Inherited = true)]

@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
 
 public class vEnableDisableEvent : MonoBehaviour
 {
@@ -9,6 +11,6 @@ public class vEnableDisableEvent : MonoBehaviour
     }
     private void OnDisable()
     {
-        onDisable.Invoke();
+        onDisable.Invoke();    
     }
 }

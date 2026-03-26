@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+#if UNITY_EDITOR
 using JetBrains.Annotations;
+#endif
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -12,48 +14,6 @@ using UnityEngine.Networking;
 
 namespace player2_sdk
 {
-    [Serializable]
-    public class NpcApiChatResponse
-    {
-        public string npc_id;
-        [CanBeNull] public string message;
-        [CanBeNull] public SingleTextToSpeechData audio;
-        [CanBeNull] public List<FunctionCallResponse> command;
-    }
-
-    [Serializable]
-    public class SingleTextToSpeechData
-    {
-        public string data;
-    }
-
-    [Serializable]
-    public class FunctionCallResponse
-    {
-        public string name;
-        public string arguments;
-
-        public FunctionCall ToFunctionCall(GameObject ai)
-        {
-            var args = JsonConvert.DeserializeObject<JObject>(arguments);
-            return new FunctionCall
-            {
-                name = name,
-                arguments = args,
-                aiObject = ai
-            };
-        }
-    }
-
-    [Serializable]
-    public class FunctionCall
-    {
-        public string name;
-        public GameObject aiObject;
-        public JObject arguments;
-    }
-
-
     [Serializable]
     public class NpcResponseEvent : UnityEvent<NpcApiChatResponse>
     {
@@ -91,6 +51,8 @@ namespace player2_sdk
         private string _traceId;
 
         private string apiKey;
+
+        private bool _showDebugLogs => _npcManager != null && _npcManager.showDebugLogs;
 
         public JsonSerializerSettings JsonSerializerSettings;
 
@@ -168,7 +130,7 @@ namespace player2_sdk
         {
             _maxReconnectAttempts = maxAttempts;
             _reconnectDelay = delaySeconds;
-            Debug.Log($"Reconnection settings configured: {maxAttempts} attempts, {delaySeconds}s delay");
+            NpcManager.Log($"Reconnection settings configured: {maxAttempts} attempts, {delaySeconds}s delay");
         }
 
         /// <summary>
@@ -184,25 +146,25 @@ namespace player2_sdk
         {
             if (_responseEvents == null)
             {
-                Debug.LogError("Response events dictionary is null!");
+                NpcManager.LogError("Response events dictionary is null!");
                 return;
             }
 
             if (string.IsNullOrEmpty(npcId))
             {
-                Debug.LogError("Cannot register NPC with null or empty ID");
+                NpcManager.LogError("Cannot register NPC with null or empty ID");
                 return;
             }
 
             if (_responseEvents.ContainsKey(npcId))
             {
                 _responseEvents[npcId] = onNpcResponse;
-                Debug.Log($"Updated NPC response listener for: {npcId}");
+                NpcManager.Log($"Updated NPC response listener for: {npcId}");
             }
             else
             {
                 _responseEvents.Add(npcId, onNpcResponse);
-                Debug.Log($"Registered NPC response listener for: {npcId} (Total NPCs: {_responseEvents.Count})");
+                NpcManager.Log($"Registered NPC response listener for: {npcId} (Total NPCs: {_responseEvents.Count})");
             }
         }
 
@@ -211,11 +173,11 @@ namespace player2_sdk
             if (_responseEvents.ContainsKey(npcId))
             {
                 _responseEvents.Remove(npcId);
-                Debug.Log($"Unregistered NPC response listener for: {npcId} (Remaining NPCs: {_responseEvents.Count})");
+                NpcManager.Log($"Unregistered NPC response listener for: {npcId} (Remaining NPCs: {_responseEvents.Count})");
             }
             else
             {
-                Debug.LogWarning($"Attempted to unregister non-existent NPC: {npcId}");
+                NpcManager.LogWarning($"Attempted to unregister non-existent NPC: {npcId}");
             }
         }
 
@@ -224,13 +186,13 @@ namespace player2_sdk
             // Check if component is still valid before proceeding
             if (this == null || !isActiveAndEnabled)
             {
-                Debug.LogWarning("Cannot start listening: component is not valid");
+                NpcManager.LogWarning("Cannot start listening: component is not valid");
                 return;
             }
 
             if (IsListening)
             {
-                Debug.LogWarning("Already listening for responses");
+                NpcManager.LogWarning("Already listening for responses");
                 return;
             }
 
@@ -238,19 +200,23 @@ namespace player2_sdk
             var skipAuth = _npcManager != null && _npcManager.ShouldSkipAuthentication();
             if (string.IsNullOrEmpty(apiKey) && !skipAuth)
             {
-                Debug.LogError("Cannot start listening: user is not authenticated");
+                NpcManager.LogError("Cannot start listening: user is not authenticated");
                 return;
             }
 
             if (skipAuth)
-                Debug.Log("Player2NpcResponseListener: Starting listener in hosted mode (no API key required)");
+            {
+                NpcManager.Log("Player2NpcResponseListener: Starting listener in hosted mode (no API key required)");
+            }
             else
-                Debug.Log("Player2NpcResponseListener: Starting listener with API key authentication");
+            {
+                NpcManager.Log("Player2NpcResponseListener: Starting listener with API key authentication");
+            }
 
             IsListening = true;
             _reconnectAttempts = 0;
             // Preserve Last-Event-Id across stop/start cycles for proper reconnection
-            Debug.Log(
+            NpcManager.Log(
                 $"Starting NPC response listener... (Registered NPCs: {string.Join(", ", _responseEvents.Keys)}) Current Last-Event-Id: {_lastEventId ?? "none"}");
 
             // Fire and forget async operation
@@ -267,7 +233,7 @@ namespace player2_sdk
             // Clean up any partial event state when stopping
             ResetEventState();
 
-            Debug.Log($"Stopped listening for NPC responses (Last-Event-Id: {_lastEventId ?? "none"})");
+            NpcManager.Log($"Stopped listening for NPC responses (Last-Event-Id: {_lastEventId ?? "none"})");
         }
 
         private async Awaitable ListenForResponsesAsync()
@@ -275,7 +241,7 @@ namespace player2_sdk
             // Initial component validity check
             if (this == null || !isActiveAndEnabled)
             {
-                Debug.LogWarning("Cannot start response listener: component is not valid");
+                NpcManager.LogWarning("Cannot start response listener: component is not valid");
                 return;
             }
 
@@ -284,20 +250,20 @@ namespace player2_sdk
                 // Additional check in case component becomes invalid during loop
                 if (this == null || !isActiveAndEnabled)
                 {
-                    Debug.Log("Component became invalid during response listening, stopping...");
+                    NpcManager.Log("Component became invalid during response listening, stopping...");
                     break;
                 }
 
                 try
                 {
-                    Debug.Log("Starting streaming connection...");
+                    NpcManager.Log("Starting streaming connection...");
                     await ProcessStreamingResponsesAsync();
 
                     // If we get here and we're still supposed to be listening,
                     // it means the connection ended unexpectedly - reconnect
                     if (IsListening)
                     {
-                        Debug.LogWarning("Streaming connection ended unexpectedly, attempting to reconnect...");
+                        NpcManager.LogWarning("Streaming connection ended unexpectedly, attempting to reconnect...");
                         await HandleReconnectionAsync();
                     }
                 }
@@ -309,7 +275,7 @@ namespace player2_sdk
                         : ex != null
                             ? $"{ex.GetType().Name}: {ex}"
                             : "Unknown error (exception was null)";
-                    Debug.LogError($"Error in response listener: {errorMessage}");
+                    NpcManager.LogError($"Error in response listener: {errorMessage}");
 
                     if (IsListening && this != null)
                     {
@@ -317,13 +283,13 @@ namespace player2_sdk
                     }
                     else
                     {
-                        Debug.Log("Stopping listener due to error while not listening");
+                        NpcManager.Log("Stopping listener due to error while not listening");
                         break;
                     }
                 }
             }
 
-            Debug.Log("Response listener task ended");
+            NpcManager.Log("Response listener task ended");
         }
 
         private async Awaitable ProcessStreamingResponsesAsync()
@@ -331,7 +297,7 @@ namespace player2_sdk
             // Validate base URL and API key before proceeding
             if (string.IsNullOrEmpty(_baseUrl))
             {
-                Debug.LogError("Cannot connect to response stream: base URL is not set");
+                NpcManager.LogError("Cannot connect to response stream: base URL is not set");
                 throw new Exception("Base URL is not configured");
             }
 
@@ -339,22 +305,22 @@ namespace player2_sdk
             var skipAuth = _npcManager != null && _npcManager.ShouldSkipAuthentication();
             if (string.IsNullOrEmpty(apiKey) && !skipAuth)
             {
-                Debug.LogError("Cannot connect to response stream: API key is not set");
+                NpcManager.LogError("Cannot connect to response stream: API key is not set");
                 throw new Exception("API key is not configured");
             }
 
             if (skipAuth)
-                Debug.Log(
+                NpcManager.Log(
                     "Player2NpcResponseListener: Connecting to response stream in hosted mode (no API key required)");
             else
-                Debug.Log("Player2NpcResponseListener: Connecting to response stream with API key authentication");
+                NpcManager.Log("Player2NpcResponseListener: Connecting to response stream with API key authentication");
 
             var url = $"{_baseUrl}/npcs/responses";
 
             // Validate URL format
             if (!Uri.IsWellFormedUriString(url, UriKind.Absolute))
             {
-                Debug.LogError($"Invalid URL format: {url}");
+                NpcManager.LogError($"Invalid URL format: {url}");
                 throw new Exception($"Invalid URL format: {url}");
             }
 
@@ -362,20 +328,20 @@ namespace player2_sdk
             try
             {
                 var testUri = new Uri(url);
-                Debug.Log($"Testing connectivity to: {testUri.Host}:{testUri.Port}");
+                NpcManager.Log($"Testing connectivity to: {testUri.Host}:{testUri.Port}");
             }
             catch (Exception uriEx)
             {
-                Debug.LogError($"URI parsing error: {uriEx.Message}");
+                NpcManager.LogError($"URI parsing error: {uriEx.Message}");
                 throw new Exception($"URI parsing error: {uriEx.Message}");
             }
 
             // Log connection details including Last-Event-Id and X-Player2-Trace-Id
             if (!string.IsNullOrEmpty(_lastEventId) || !string.IsNullOrEmpty(_traceId))
-                Debug.Log(
+                NpcManager.Log(
                     $"Connecting to response stream: {url} (reconnecting with Last-Event-Id: {_lastEventId ?? "none"}, X-Player2-Trace-Id: {_traceId ?? "none"})");
             else
-                Debug.Log(
+                NpcManager.Log(
                     $"Connecting to response stream: {url} (fresh connection, no Last-Event-Id or X-Player2-Trace-Id)");
 
             // Reset SSE parsing state for new connection
@@ -421,7 +387,7 @@ namespace player2_sdk
                     // Check if request is still valid
                     if (request == null)
                     {
-                        Debug.LogError("Request became null during processing");
+                       // Debug.LogError("Request became null during processing");
                         break;
                     }
 
@@ -438,7 +404,7 @@ namespace player2_sdk
                         // Process any accumulated but incomplete SSE event on disconnection
                         if (_currentEventData.Length > 0 || !string.IsNullOrEmpty(_currentEventId))
                         {
-                            Debug.Log("Processing incomplete SSE event due to connection loss");
+                            NpcManager.Log("Processing incomplete SSE event due to connection loss");
                             ProcessCompleteEvent();
                         }
                     }
@@ -446,7 +412,7 @@ namespace player2_sdk
                     // Distinguish success vs error vs early finish
                     if (request.result == UnityWebRequest.Result.Success)
                     {
-                        Debug.Log(
+                        NpcManager.Log(
                             "Streaming request completed normally (server closed connection). Exiting stream loop.");
                         break; // Exit loop; caller will handle reconnection if still listening
                     }
@@ -468,13 +434,13 @@ namespace player2_sdk
                     var traceInfo = !string.IsNullOrEmpty(_traceId) ? _traceId : "none";
 
                     if (errorMsg.Contains("Curl error 18"))
-                        Debug.LogError(
+                        NpcManager.LogError(
                             $"Server closed connection unexpectedly (Curl error 18), reconnecting with Last-Event-Id: {lastEventInfo}, X-Player2-Trace-Id: {traceInfo}");
                     else if (errorMsg.Contains("Curl error 56"))
-                        Debug.LogError(
+                        NpcManager.LogError(
                             $"Connection reset by server (Curl error 56), reconnecting with Last-Event-Id: {lastEventInfo}, X-Player2-Trace-Id: {traceInfo}");
                     else
-                        Debug.LogError(
+                        NpcManager.LogError(
                             $"UnityWebRequest.Result returned {request?.result}, errorMsg: {errorMsg}, responseCode: {request?.responseCode}, reconnecting with Last-Event-Id: {lastEventInfo}, X-Player2-Trace-Id: {traceInfo}");
 
                     break; // Exit loop to allow reconnection
@@ -494,10 +460,10 @@ namespace player2_sdk
                         if (!string.IsNullOrEmpty(newTraceId) && newTraceId != _traceId)
                         {
                             _traceId = newTraceId;
-                            Debug.Log($"Captured X-Player2-Trace-Id: {_traceId}");
+                            NpcManager.Log($"Captured X-Player2-Trace-Id: {_traceId}");
                         }
 
-                        Debug.Log("Streaming connection established (first bytes received)");
+                        NpcManager.Log("Streaming connection established (first bytes received)");
                     }
 
                 if (downloadHandler != null && downloadHandler.text != null &&
@@ -511,13 +477,13 @@ namespace player2_sdk
                     if (Debug.isDebugBuild && newData.Length > 200)
                     {
                         var fileName = WritePayloadToFile(newData, "received_data");
-                        Debug.Log(
-                            $"Received {newData.Length} new chars (total {lastProcessedLength}). Data written to: {fileName}");
+                        //Debug.Log(
+                        //    $"Received {newData.Length} new chars (total {lastProcessedLength}). Data written to: {fileName}");
                     }
                     else if (Debug.isDebugBuild)
                     {
-                        Debug.Log(
-                            $"Received {newData.Length} new chars (total {lastProcessedLength}). Data: {newData}");
+                        //Debug.Log(
+                        //    $"Received {newData.Length} new chars (total {lastProcessedLength}). Data: {newData}");
                     }
 
                     ProcessNewData(newData, lineBuffer);
@@ -533,7 +499,7 @@ namespace player2_sdk
                     var traceInfo = !string.IsNullOrEmpty(_traceId)
                         ? _traceId
                         : "none";
-                    Debug.LogError(
+                    NpcManager.LogError(
                         $"No data received for {CONNECTION_TIMEOUT} seconds (expected pings every 15s), reconnecting with Last-Event-Id: {lastEventInfo}, X-Player2-Trace-Id: {traceInfo}");
                     break; // Exit loop to trigger reconnection
                 }
@@ -541,7 +507,7 @@ namespace player2_sdk
                 // Check if component is still valid during loop execution
                 if (this == null || !isActiveAndEnabled)
                 {
-                    Debug.Log("Component became invalid during response listening, stopping...");
+                    NpcManager.Log("Component became invalid during response listening, stopping...");
                     break;
                 }
 
@@ -549,20 +515,20 @@ namespace player2_sdk
                 await Awaitable.WaitForSecondsAsync(0.05f);
             }
 
-            Debug.Log("Streaming loop ended");
+            //Debug.Log("Streaming loop ended");
         }
 
         private void ProcessNewData(string newData, StringBuilder lineBuffer)
         {
             if (newData == null)
             {
-                Debug.LogWarning("Received null newData in ProcessNewData");
+               // Debug.LogWarning("Received null newData in ProcessNewData");
                 return;
             }
 
             if (lineBuffer == null)
             {
-                Debug.LogError("lineBuffer is null in ProcessNewData");
+               // Debug.LogError("lineBuffer is null in ProcessNewData");
                 return;
             }
 
@@ -587,7 +553,7 @@ namespace player2_sdk
         {
             if (line == null)
             {
-                Debug.LogWarning("Received null line in ProcessLine");
+                NpcManager.LogWarning("Received null line in ProcessLine");
                 return;
             }
 
@@ -642,7 +608,7 @@ namespace player2_sdk
         {
             if (_currentEventData == null)
             {
-                Debug.LogError("_currentEventData is null in AppendDataLine");
+               // Debug.LogError("_currentEventData is null in AppendDataLine");
                 return;
             }
 
@@ -650,7 +616,7 @@ namespace player2_sdk
             var newLength = _currentEventData.Length + (data != null ? data.Length : 0) + 1; // +1 for potential newline
             if (newLength > MAX_EVENT_SIZE)
             {
-                Debug.LogError($"SSE event would exceed max size ({MAX_EVENT_SIZE} bytes), discarding");
+                NpcManager.LogError($"SSE event would exceed max size ({MAX_EVENT_SIZE} bytes), discarding");
                 ResetEventState();
                 return;
             }
@@ -671,10 +637,13 @@ namespace player2_sdk
                     _lastEventId = _currentEventId;
 
                     // Log event ID updates for debugging
-                    if (_currentEventType == "ping")
-                        Debug.Log($"Updated Last-Event-Id from ping event: {_lastEventId}");
-                    else
-                        Debug.Log($"Updated Last-Event-Id from data event: {_lastEventId}");
+                    if (_showDebugLogs)
+                    {
+                        if (_currentEventType == "ping")
+                            Debug.Log($"Updated Last-Event-Id from ping event: {_lastEventId}");
+                        else
+                            Debug.Log($"Updated Last-Event-Id from data event: {_lastEventId}");
+                    }
                 }
 
                 // Ignore ping events but still track their event ID
@@ -689,7 +658,7 @@ namespace player2_sdk
 
                     // Write the complete JSON payload to file instead of logging
                     var payloadFileName = WritePayloadToFile(dataString, "npc_message_payload");
-                    Debug.Log($"NPC Message JSON Payload (Event-Id: {_currentEventId}) written to: {payloadFileName}");
+                    NpcManager.Log($"NPC Message JSON Payload (Event-Id: {_currentEventId}) written to: {payloadFileName}");
 
                     var response =
                         JsonConvert.DeserializeObject<NpcApiChatResponse>(dataString,
@@ -699,7 +668,16 @@ namespace player2_sdk
                     {
                         if (_responseEvents.ContainsKey(response.npc_id))
                         {
-                            Debug.Log(
+                            if (!string.IsNullOrEmpty(response.message))
+                            {
+                                int bracketEnd = response.message.IndexOf('>');
+                                if (response.message.StartsWith("<") && bracketEnd != -1)
+                                {
+                                    response.message = response.message.Substring(bracketEnd + 1).TrimStart();
+                                }
+                            }
+
+                            NpcManager.Log(
                                 $"Received SSE response from NPC {response.npc_id}: {response.message} (Event-Id: {_currentEventId})");
 
                             // Null-safety check for event handler
@@ -711,19 +689,19 @@ namespace player2_sdk
                             }
                             catch (Exception handlerEx)
                             {
-                                Debug.LogError(
+                                NpcManager.LogError(
                                     $"Error in NPC response handler for {response.npc_id}: {handlerEx.Message}");
                             }
                         }
                         else
                         {
-                            Debug.LogWarning($"Received SSE response for unregistered NPC: {response.npc_id}");
+                            NpcManager.LogWarning($"Received SSE response for unregistered NPC: {response.npc_id}");
                         }
                     }
                     else
                     {
                         var invalidDataFileName = WritePayloadToFile(dataString, "invalid_npc_event");
-                        Debug.LogWarning(
+                        NpcManager.LogWarning(
                             $"Received SSE event with invalid or missing npc_id. Data written to: {invalidDataFileName}");
                     }
                 }
@@ -731,12 +709,12 @@ namespace player2_sdk
             catch (JsonException jsonEx)
             {
                 var errorDataFileName = WritePayloadToFile(_currentEventData.ToString(), "json_parse_error");
-                Debug.LogError(
+                NpcManager.LogError(
                     $"JSON parsing error in SSE event: {jsonEx.Message}. Data written to: {errorDataFileName}");
             }
             catch (Exception e)
             {
-                Debug.LogError(
+                NpcManager.LogError(
                     $"Unexpected error processing SSE event: {e.Message}. Data length: {_currentEventData.Length}");
             }
             finally
@@ -763,12 +741,12 @@ namespace player2_sdk
                     if (!Directory.Exists(_tempDirectory))
                     {
                         Directory.CreateDirectory(_tempDirectory);
-                        Debug.Log($"Created payload temp directory: {_tempDirectory}");
+                        NpcManager.Log($"Created payload temp directory: {_tempDirectory}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError($"Failed to create temp directory: {ex.Message}");
+                    NpcManager.LogError($"Failed to create temp directory: {ex.Message}");
                     _tempDirectory = "/tmp"; // Fallback to /tmp
                 }
             }
@@ -790,7 +768,7 @@ namespace player2_sdk
             }
             catch (Exception ex)
             {
-                Debug.LogError($"Failed to write payload to file: {ex.Message}");
+                NpcManager.LogError($"Failed to write payload to file: {ex.Message}");
                 return $"<failed_to_write_file: {ex.Message}>";
             }
         }
@@ -801,12 +779,12 @@ namespace player2_sdk
 
             if (_reconnectAttempts > _maxReconnectAttempts)
             {
-                Debug.LogError($"Max reconnection attempts ({_maxReconnectAttempts}) reached. Stopping listener.");
+                NpcManager.LogError($"Max reconnection attempts ({_maxReconnectAttempts}) reached. Stopping listener.");
                 IsListening = false;
                 return;
             }
 
-            Debug.Log(
+            NpcManager.Log(
                 $"Reconnection attempt {_reconnectAttempts}/{_maxReconnectAttempts} in {_reconnectDelay} seconds (Last-Event-Id: {_lastEventId ?? "none"}, X-Player2-Trace-Id: {_traceId ?? "none"})...");
             await Awaitable.WaitForSecondsAsync(_reconnectDelay);
         }

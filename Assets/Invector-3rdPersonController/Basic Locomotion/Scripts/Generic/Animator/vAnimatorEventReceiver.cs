@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using Invector;
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Invector.vEventSystems
@@ -40,8 +43,8 @@ namespace Invector.vEventSystems
         }
 
         private void OnDisable()
-        {
-            RemoveEvents();
+        {            
+            RemoveEvents();            
         }
 
         public void OnEnable()
@@ -63,10 +66,6 @@ namespace Invector.vEventSystems
             if (animatorEvents.Count > 0)
             {
                 var animator = getAnimatorInParent ? GetComponentInParent<Animator>() : GetComponent<Animator>();
-                if (getAnimatorInParent && animator.gameObject == gameObject && transform.parent)
-                {
-                    animator = transform.parent.GetComponentInParent<Animator>();
-                }
                 if (animator)
                 {
                     hasAnimator = true;
