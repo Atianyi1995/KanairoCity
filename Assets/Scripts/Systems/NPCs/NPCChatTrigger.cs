@@ -137,8 +137,15 @@ namespace player2_sdk
                 if (vControl != null) vControl.stopMove = true;
                 if (fsmController != null) fsmController.isStopped = true;
                 
-                // REMOVED: Player input locking is removed to allow movement
-                // if (playerInput != null) playerInput.lockInput = true;
+                // Lock player input and put camera behind
+                if (playerInput != null)
+                {
+                    playerInput.SetLockAllInput(true);
+                    if (playerInput.tpCamera != null)
+                    {
+                        playerInput.tpCamera.RotateCamera(playerInput.transform.eulerAngles.y, 0);
+                    }
+                }
 
                 if (nameLabel != null && npcComponent != null)
                 {
@@ -164,12 +171,15 @@ namespace player2_sdk
             // Release Headtrack target
             if (headtrack != null) headtrack.mainLookTarget = null;
 
+            // Unlock player input
+            if (playerInput != null)
+            {
+                playerInput.SetLockAllInput(false);
+            }
+
             // Restore cursor state for Invector 3rd Person Controller
             Cursor.visible = false;
             Cursor.lockState = CursorLockMode.Locked;
-            
-            // REMOVED: Player input unlocking is removed as it's no longer locked
-            // if (playerInput != null) playerInput.lockInput = false;
         }
 
         private void OnDrawGizmosSelected()

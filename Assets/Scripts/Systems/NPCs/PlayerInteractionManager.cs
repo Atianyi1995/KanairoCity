@@ -171,6 +171,7 @@ namespace player2_sdk
 
             // Clear old text
             if (chatInputField != null) chatInputField.text = "";
+            if (activeNpc != null && activeNpc.outputMessage != null) activeNpc.outputMessage.text = "";
             
             // Link STT if possible (needs a central STT manager or similar redirection)
         }
@@ -179,6 +180,10 @@ namespace player2_sdk
         {
             isChatting = false;
             chatPanel.SetActive(false);
+
+            // Hide and lock cursor when chat closes
+            Cursor.visible = false;
+            Cursor.lockState = CursorLockMode.Locked;
 
             if (activeAi != null) activeAi.stopMove = false;
             if (activeFsm != null) activeFsm.isStopped = false;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 #if UNITY_EDITOR
@@ -98,6 +99,8 @@ namespace player2_sdk
         [CustomNpcChecker]
 #endif
         private readonly UnityEvent<Character, UnityEvent<Character, string>> OnNewCustomCharacter = new();
+
+        private Coroutine _thinkingCoroutine;
 
         private string _npcID;
 
@@ -217,7 +220,36 @@ namespace player2_sdk
 
         public void OnChatMessageSubmitted(string message)
         {
-            if (outputMessage != null) outputMessage.text = "";
+            if (outputMessage != null) 
+            {
+                outputMessage.text = "";
+                StopThinkingAnimation();
+                _thinkingCoroutine = StartCoroutine(StartThinkingAnimation());
+            }
+
+            // --- PERSUASION LOGIC START ---
+            // If the NPC has a voting profile, check if the player's message contains any campaign promises
+            var votingProfile = GetComponent<Kanairo.Core.NPCVotingProfile>();
+            if (votingProfile != null)
+            {
+                float trustChange = Kanairo.Core.VotingLogic.CalculateTrustFromText(message, 
+                    votingProfile.primaryNeed, 
+                    votingProfile.secondaryNeed, 
+                    votingProfile.currentSupportedCandidate, 
+                    true);
+                
+                if (trustChange > 0)
+                {
+                    votingProfile.AddPlayerTrust(trustChange);
+                    // Update campaign totals
+                    if (Kanairo.Core.CampaignManager.Instance != null)
+                        Kanairo.Core.CampaignManager.Instance.RefreshApprovalTotals();
+                    
+                    Debug.Log($"[Persuasion] Player mentioned a topic! Trust changed by {trustChange}. New Trust: {votingProfile.trustInPlayer}");
+                }
+            }
+            // --- PERSUASION LOGIC END ---
+
             _ = SendChatMessageAsync(message);
         }
 
@@ -326,10 +358,19 @@ namespace player2_sdk
                     return;
                 }
 
+                // Try to get campaign context if the link exists
+                string gameStateContext = null;
+                var campaignLink = GetComponent<Kanairo.Core.Player2CampaignLink>();
+                if (campaignLink != null)
+                {
+                    gameStateContext = campaignLink.GetCampaignContext();
+                }
+
                 var chatRequest = new ChatRequest
                 {
                     sender_name = fullName,
                     sender_message = message,
+                    game_state_info = gameStateContext,
                     tts = null
                 };
 
@@ -391,6 +432,29 @@ namespace player2_sdk
                 var error =
                     $"Failed to send message: {request.error} - Response: {request.downloadHandler.text}{traceInfo}";
                 NpcManager.LogError(error);
+            }
+        }
+
+        private IEnumerator StartThinkingAnimation()
+        {
+            if (outputMessage == null) yield break;
+
+            int dotCount = 1;
+            while (true)
+            {
+                string dots = new string('.', dotCount);
+                outputMessage.text = "Thinking" + dots;
+                dotCount = (dotCount % 3) + 1; // 1, 2, 3
+                yield return new WaitForSeconds(0.5f);
+            }
+        }
+
+        public void StopThinkingAnimation()
+        {
+            if (_thinkingCoroutine != null)
+            {
+                StopCoroutine(_thinkingCoroutine);
+                _thinkingCoroutine = null;
             }
         }
     }

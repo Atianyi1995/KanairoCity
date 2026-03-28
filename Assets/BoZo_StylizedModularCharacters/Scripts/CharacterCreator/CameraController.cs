@@ -6,7 +6,7 @@ namespace Bozo.ModularCharacters
 {
     public class CameraController : MonoBehaviour
     {
-        Camera cam;
+        public Camera cam;
         float position;
         public float scrollSpeed;
         public Transform startPosition;
@@ -25,7 +25,7 @@ namespace Bozo.ModularCharacters
 
         private void Awake()
         {
-            cam = Camera.main;
+            //cam = Camera.main;
             foreach (var item in cameraPositions)
             {
                 camPos.Add(item.type, item);

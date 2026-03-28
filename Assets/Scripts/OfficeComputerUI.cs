@@ -1,0 +1,84 @@
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
+
+namespace Kanairo.UI
+{
+    public class OfficeComputerUI : MonoBehaviour
+    {
+        [Header("References")]
+        public Slider securitySlider;
+        public Slider cleanlinessSlider;
+        public Slider roadsSlider;
+
+        public TextMeshProUGUI totalBudgetText;
+        public TextMeshProUGUI remainingBudgetText;
+        public TextMeshProUGUI approvalText;
+        public TextMeshProUGUI personalFundsText;
+        public GameObject overspendWarning;
+
+        private float total;
+
+        private void OnEnable()
+        {
+            var manager = Core.OfficeBudgetManager.Instance;
+            if (manager == null) return;
+
+            total = manager.totalBudget;
+            securitySlider.value = manager.securityFunding / total;
+            cleanlinessSlider.value = manager.cleanlinessFunding / total;
+            roadsSlider.value = manager.roadsFunding / total;
+
+            UpdateDisplay();
+        }
+
+        private void Update()
+        {
+            // Update display in real-time as sliders move or approval changes
+            UpdateDisplay();
+        }
+
+        public void UpdateDisplay()
+        {
+            var manager = Core.OfficeBudgetManager.Instance;
+            if (manager == null) return;
+
+            float sec = securitySlider.value * total;
+            float clean = cleanlinessSlider.value * total;
+            float rd = roadsSlider.value * total;
+            float spent = sec + clean + rd;
+            
+            totalBudgetText.text = $"Total: ${total:N0}";
+            remainingBudgetText.text = $"Remaining: ${manager.remainingBudget:N0}";
+            personalFundsText.text = $"Secret Funds: ${manager.personalFunds:N0}";
+            overspendWarning.SetActive(manager.remainingBudget < 0);
+            approvalText.text = $"Public Approval: {manager.publicApproval:F1}%";
+        }
+
+        public void OnApplyClick()
+        {
+            float sec = securitySlider.value * total;
+            float clean = cleanlinessSlider.value * total;
+            float rd = roadsSlider.value * total;
+
+            Core.OfficeBudgetManager.Instance.ApplyBudget(sec, clean, rd);
+        }
+
+        public void OnSkimFundsClick()
+        {
+            // Skim 5% of remaining budget into personal funds
+            var manager = Core.OfficeBudgetManager.Instance;
+            if (manager != null)
+            {
+                float amount = manager.remainingBudget * 0.05f;
+                manager.TransferToPersonal(amount);
+            }
+        }
+
+        public void OnCloseClick()
+        {
+            gameObject.SetActive(false);
+            // Re-enable player movement here if needed
+        }
+    }
+}

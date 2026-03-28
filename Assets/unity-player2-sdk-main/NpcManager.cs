@@ -8,6 +8,7 @@ using Newtonsoft.Json.Serialization;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
+using Kanairo.Core;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -523,6 +524,13 @@ namespace player2_sdk
                 {
                     if (uiAttached && onNpcResponse != null)
                     {
+                        // Stop thinking animation before displaying message
+                        var player2Npc = npcObject.GetComponent<Player2Npc>();
+                        if (player2Npc != null)
+                        {
+                            player2Npc.StopThinkingAnimation();
+                        }
+
                         Debug.Log($"Updating UI for NPC {id}: {response.message}");
                         onNpcResponse.text = response.message;
                     }
@@ -530,6 +538,27 @@ namespace player2_sdk
                     {
                         Debug.Log($"(No UI) NPC {id} message: {response.message}");
                     }
+
+                    // --- PERSUASION LOGIC START ---
+                    // Apply trust changes based on the AI's response to the player's message
+                    if (npcObject != null)
+                    {
+                        var votingProfile = npcObject.GetComponent<NPCVotingProfile>();
+                        if (votingProfile != null)
+                        {
+                            float trustChange = VotingLogic.CalculateTrustFromAIResponse(response.message);
+                            if (Mathf.Abs(trustChange) > 0.01f)
+                            {
+                                votingProfile.AddPlayerTrust(trustChange);
+                                // Update campaign totals
+                                if (CampaignManager.Instance != null)
+                                    CampaignManager.Instance.RefreshApprovalTotals();
+                                
+                                Debug.Log($"[Reaction Persuasion] AI response was {(trustChange > 0 ? "positive" : "negative")}! Trust changed by {trustChange}. New Trust: {votingProfile.trustInPlayer}");
+                            }
+                        }
+                    }
+                    // --- PERSUASION LOGIC END ---
                 }
 
                 if (response.audio != null && !string.IsNullOrEmpty(response.audio.data))

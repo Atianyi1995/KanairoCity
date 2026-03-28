@@ -5,6 +5,7 @@ using KanairoCity.UI;
 using Invector.vCharacterController;
 using Invector.vCamera;
 using System.Collections;
+using Kanairo.Core;
 
 namespace KanairoCity.UI
 {
@@ -22,6 +23,7 @@ namespace KanairoCity.UI
         [SerializeField] private ProfessionSelectorUI professionSelector;
         [SerializeField] private CharacterMenuController characterCreator;
         [SerializeField] private GameObject menuCanvas;
+        [SerializeField] private GameObject continueButton;
 
         [Header("Invector Setup")]
         [SerializeField] private GameObject invectorPlayer; // References vBasicController
@@ -38,6 +40,13 @@ namespace KanairoCity.UI
             
             // Set Initial State: Menu Character Active, Player Inactive
             SetInvectorState(false);
+
+            // Toggle Continue Button Visibility
+            if (continueButton != null)
+            {
+                bool hasSave = PlayerPrefs.HasKey("CampaignTimer");
+                continueButton.SetActive(hasSave);
+            }
 
             // Link UI listeners to update play button status
             if (modeSelector != null) modeSelector.OnModeSelected += OnSelectionChanged;
@@ -74,8 +83,36 @@ namespace KanairoCity.UI
             // Swap Characters and Enable Gameplay
             SetInvectorState(true);
             
-            // Ensure the main camera is tagged correctly or Invector camera is used
-            // Invector typically uses its own camera system.
+            // Start the Campaign Logic via GameManager to handle fresh start and tutorial delay
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.SetCampaign();
+            }
+
+            if (profileData.LastSelectedMode == GameMode.Multiplayer)
+            {
+                StartMultiplayer();
+            }
+            else
+            {
+                StartSinglePlayer();
+            }
+        }
+
+        public void ContinueGame()
+        {
+            // Close Menu and Deactivate Character Creator
+            if (menuCanvas != null) menuCanvas.SetActive(false);
+            if (menuManager != null) menuManager.DeactivateCharacterCreator();
+            
+            // Swap Characters and Enable Gameplay
+            SetInvectorState(true);
+            
+            // Continue the Campaign Logic via GameManager
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.ContinueCampaign();
+            }
 
             if (profileData.LastSelectedMode == GameMode.Multiplayer)
             {
