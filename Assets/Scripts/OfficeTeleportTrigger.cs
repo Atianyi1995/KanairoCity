@@ -14,23 +14,45 @@ namespace Kanairo.Core
 
         private bool isPlayerInRange = false;
 
+        public bool outside, inside;
+        public bool inOffice;
         private void Update()
         {
-            if (requireButtonPress && isPlayerInRange && Input.GetKeyDown(teleportKey))
-            {
-                TeleportPlayer();
-            }
+            //if (requireButtonPress && isPlayerInRange && Input.GetKeyDown(teleportKey))
+            //{
+            //    TeleportPlayer();
+            //}
         }
 
         private void OnTriggerEnter(Collider other)
         {
             if (other.CompareTag("Player"))
             {
-                isPlayerInRange = true;
-                if (!requireButtonPress)
+                if (outside)
                 {
-                    TeleportPlayer();
+                    if (!inOffice)
+                    {
+                        isPlayerInRange = true;
+                        if (!requireButtonPress)
+                        {
+                            TeleportPlayer();
+                        }
+                        inOffice = true;
+                    }
+                  
                 }
+                else if (inside)
+                {
+                    if (inOffice)
+                    {
+                        isPlayerInRange = true;
+                        if (!requireButtonPress)
+                        {
+                            TeleportPlayer();
+                        }
+                    }
+                }
+                
             }
         }
 
@@ -38,8 +60,18 @@ namespace Kanairo.Core
         {
             if (other.CompareTag("Player"))
             {
-                isPlayerInRange = false;
+                if (inside)
+                {
+                    isPlayerInRange = false;
+                    inOffice = true;
+                }
+                else if (outside)
+                {
+                    isPlayerInRange = false;
+                    inOffice = false;
+                }
             }
+            
         }
 
         private void TeleportPlayer()
@@ -50,6 +82,10 @@ namespace Kanairo.Core
                 return;
             }
 
+            if (inOffice)
+            {
+
+            }
             GameObject player = GameObject.FindGameObjectWithTag("Player");
             if (player != null)
             {

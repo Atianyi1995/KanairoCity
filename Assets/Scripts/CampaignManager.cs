@@ -24,6 +24,12 @@ namespace Kanairo.Core
 
         private List<NPCVotingProfile> allNPCs = new List<NPCVotingProfile>();
 
+        private readonly string[] kenyanNames = new string[]
+        {
+            "Maina", "Kamau", "Otieno", "Omondi", "Kiprono", "Mutua", "Wanjala", "Mwangi", 
+            "Juma", "Ochieng", "Kariuki", "Kimutai", "Waweru", "Ondieki", "Wanyama", "Njoroge"
+        };
+
         private void Awake()
         {
             Instance = this;
@@ -43,8 +49,39 @@ namespace Kanairo.Core
                 timer = campaignDuration;
             }
 
+            // Assign a random Kenyan name to the Rival Candidate (or load existing)
+            if (RivalCandidate != null)
+            {
+                string savedRivalName = PlayerPrefs.GetString("RivalCandidateName", "");
+                if (string.IsNullOrEmpty(savedRivalName))
+                {
+                    savedRivalName = kenyanNames[Random.Range(0, kenyanNames.Length)];
+                    PlayerPrefs.SetString("RivalCandidateName", savedRivalName);
+                }
+                RivalCandidate.candidateName = savedRivalName;
+                RivalCandidate.gameObject.name = "Rival_" + savedRivalName;
+            }
+
+            // Register Multiplayer Candidates found in the scene
+            var candidates = Object.FindObjectsByType<CandidateProfile>(FindObjectsSortMode.None);
+            foreach (var c in candidates)
+            {
+                RegisterMultiplayerCandidate(c);
+            }
+
             isCampaignActive = false; // Campaign starts inactive
             RefreshApprovalTotals();
+        }
+
+        public List<CandidateProfile> multiplayerCandidates = new List<CandidateProfile>();
+
+        public void RegisterMultiplayerCandidate(CandidateProfile candidate)
+        {
+            if (!multiplayerCandidates.Contains(candidate))
+            {
+                multiplayerCandidates.Add(candidate);
+                Debug.Log($"[CAMPAIGN] Registered candidate for election: {candidate.candidateName}");
+            }
         }
 
         public void StartCampaign(bool isNewGame = true)
@@ -62,22 +99,51 @@ namespace Kanairo.Core
                     PlayerPrefs.DeleteKey(npc.gameObject.name + "_HasTalked");
                 }
                 PlayerPrefs.DeleteKey("CampaignTimer");
+                PlayerPrefs.DeleteKey("CurrentCycleState");
+
+                // Start with the Tutorial for new campaigns
+                if (GameManager.Instance != null)
+                {
+                    GameManager.Instance.ChangeState(GameState.Tutorial);
+                }
             }
             else
             {
                 // Continue from where we left off
                 timer = PlayerPrefs.GetFloat("CampaignTimer", campaignDuration);
+                
+                // If we were in a post-election state, restore it
+                string savedState = PlayerPrefs.GetString("CurrentCycleState", "Campaigning");
+                
+                // Set the state first to ensure UI activates
+                if (GameManager.Instance != null)
+                {
+                    if (savedState == "OpponentTerm") 
+                        GameManager.Instance.ChangeState(GameState.OpponentTerm);
+                    else if (savedState == "InOffice")
+                        GameManager.Instance.ChangeState(GameState.InOffice);
+                    else
+                        GameManager.Instance.ChangeState(GameState.Campaigning);
+                }
+
+                // If the timer is already 0 and we were campaigning, it means we closed during result screen
+                if (timer <= 0 && savedState == "Campaigning")
+                {
+                    RefreshApprovalTotals();
+                    if (playerSupportPercent > 50f)
+                        GameManager.Instance.ChangeState(GameState.Victory);
+                    else
+                        GameManager.Instance.ChangeState(GameState.Defeat);
+                }
+                //Debug.Log("Cntinue Campaign");
+                RefreshApprovalTotals();
+                //Debug.Log("Updated Totals");
+                return; // ChangeState handles the rest
             }
 
             RefreshApprovalTotals();
             
-            // Sync with GameManager state
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.ChangeState(GameState.Campaigning);
-            }
-
-            Debug.Log(isNewGame ? "New Campaign has started!" : "Campaign continued from saved state!");
+            Debug.Log(isNewGame ? "New Campaign has started with Tutorial!" : "Campaign continued from saved state!");
         }
 
         private void Update()
@@ -90,12 +156,24 @@ namespace Kanairo.Core
             if (Mathf.FloorToInt(timer) % 5 == 0)
             {
                 PlayerPrefs.SetFloat("CampaignTimer", timer);
+                PlayerPrefs.SetString("CurrentCycleState", GameManager.Instance.CurrentState.ToString());
             }
 
             if (timer <= 0)
             {
-                EndCampaign();
+                if (GameManager.Instance.CurrentState == GameState.Campaigning)
+                    EndCampaign();
+                else
+                    ResetToNewCampaign();
             }
+        }
+
+        private void ResetToNewCampaign()
+        {
+            // After 30 mins of office/rival rule, start a new 2-minute election
+            timer = campaignDuration;
+            GameManager.Instance.ChangeState(GameState.Campaigning);
+            Debug.Log("New Election Cycle Started!");
         }
 
         public void RefreshApprovalTotals()
@@ -107,23 +185,34 @@ namespace Kanairo.Core
             float totalInfluence = allNPCs.Sum(n => n.influenceValue);
             if (totalInfluence <= 0) return;
 
-            float playerPoints = 0;
-            float rivalPoints = 0;
+            // Use a dictionary to track support for all registered candidates (multiplayer and AI)
+            Dictionary<CandidateProfile, float> supportMap = new Dictionary<CandidateProfile, float>();
+            foreach (var candidate in multiplayerCandidates)
+            {
+                supportMap[candidate] = 0f;
+            }
 
             foreach (var npc in allNPCs)
             {
-                if (npc.currentSupportedCandidate == PlayerCandidate)
-                    playerPoints += npc.influenceValue;
-                else if (npc.currentSupportedCandidate == RivalCandidate)
-                    rivalPoints += npc.influenceValue;
+                if (npc.currentSupportedCandidate != null && supportMap.ContainsKey(npc.currentSupportedCandidate))
+                {
+                    supportMap[npc.currentSupportedCandidate] += npc.influenceValue;
+                }
             }
 
-            playerSupportPercent = (playerPoints / totalInfluence) * 100f;
-            rivalSupportPercent = (rivalPoints / totalInfluence) * 100f;
-            undecidedPercent = 100f - playerSupportPercent - rivalSupportPercent;
+            // Update individual candidate support percentages
+            foreach (var candidate in multiplayerCandidates)
+            {
+                candidate.supportPercentage = (supportMap[candidate] / totalInfluence) * 100f;
+            }
+
+            // Keep these fields synced for backward compatibility with existing UI
+            if (PlayerCandidate != null) playerSupportPercent = PlayerCandidate.supportPercentage;
+            if (RivalCandidate != null) rivalSupportPercent = RivalCandidate.supportPercentage;
             
-            if (PlayerCandidate != null) PlayerCandidate.supportPercentage = playerSupportPercent;
-            if (RivalCandidate != null) RivalCandidate.supportPercentage = rivalSupportPercent;
+            float totalSupportedPercent = 0;
+            foreach (var candidate in multiplayerCandidates) totalSupportedPercent += candidate.supportPercentage;
+            undecidedPercent = Mathf.Max(0, 100f - totalSupportedPercent);
         }
 
         private void EndCampaign()
@@ -131,23 +220,57 @@ namespace Kanairo.Core
             isCampaignActive = false;
             RefreshApprovalTotals(); // Final check
             
-            if (playerSupportPercent > 50f)
+            // Determine winner in a field of multiple candidates
+            CandidateProfile winner = null;
+            float highestSupport = -1f;
+
+            foreach (var candidate in multiplayerCandidates)
+            {
+                if (candidate.supportPercentage > highestSupport)
+                {
+                    highestSupport = candidate.supportPercentage;
+                    winner = candidate;
+                }
+            }
+
+            if (winner == PlayerCandidate && playerSupportPercent > 0) // Basic win condition check
             {
                 GameManager.Instance.ChangeState(GameState.Victory);
             }
             else
             {
-                // If you don't win, you lost to the rival
+                // If the player didn't win, someone else did (AI or other player)
                 GameManager.Instance.ChangeState(GameState.Defeat);
             }
         }
 
-        public void StartOpponentTerm()
+        public void StartPostElectionTerm(bool isPlayerInOffice)
         {
-            timer = 1800f; // 30 minutes
+            // If the timer was 0 or invalid when starting a new term, reset to full 30 mins
+            if (timer <= 0 || timer < 1000f) timer = 1800f; // Reset to 30 minutes if term is essentially over
+            
             isCampaignActive = true; 
-            // During OpponentTerm, player can still interact and gain trust
-            // but Rival won't be actively campaigning as much or at all
+            
+            // If we lost, ensure NPCs aren't completely biased against us for the next cycle
+            if (!isPlayerInOffice)
+            {
+                foreach (var npc in allNPCs)
+                {
+                    // Give the player a small "underdog" trust boost to make a comeback possible
+                    npc.AddPlayerTrust(10f);
+                }
+                RefreshApprovalTotals();
+            }
+            
+            // Save state immediately
+            PlayerPrefs.SetFloat("CampaignTimer", timer);
+            PlayerPrefs.SetString("CurrentCycleState", isPlayerInOffice ? "InOffice" : "OpponentTerm");
+            PlayerPrefs.Save();
+            
+            if (isPlayerInOffice)
+                Debug.Log("You are now in office! You have 30 minutes to govern and keep public appeal.");
+            else
+                Debug.Log($"The Rival ({RivalCandidate.candidateName}) has taken office! You have 30 minutes to rebuild appeal as a civilian.");
         }
 
         public float GetRemainingTime() => Mathf.Max(0, timer);

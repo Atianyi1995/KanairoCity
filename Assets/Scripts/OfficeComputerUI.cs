@@ -11,6 +11,13 @@ namespace Kanairo.UI
         public Slider cleanlinessSlider;
         public Slider roadsSlider;
 
+        [Header("Political Party System")]
+        public TMP_InputField partyNameInput;
+        public GameObject registerButton;
+        public TextMeshProUGUI partyStatusText;
+        public GameObject partyPanel;
+
+        [Header("BudgetTexts")]
         public TextMeshProUGUI totalBudgetText;
         public TextMeshProUGUI remainingBudgetText;
         public TextMeshProUGUI approvalText;
@@ -18,6 +25,7 @@ namespace Kanairo.UI
         public GameObject overspendWarning;
 
         private float total;
+        private bool hasParty;
 
         private void OnEnable()
         {
@@ -29,6 +37,11 @@ namespace Kanairo.UI
             cleanlinessSlider.value = manager.cleanlinessFunding / total;
             roadsSlider.value = manager.roadsFunding / total;
 
+            // Load Party Data
+            string savedParty = PlayerPrefs.GetString("PoliticalPartyName", "");
+            hasParty = !string.IsNullOrEmpty(savedParty);
+            UpdatePartyUI(savedParty);
+
             UpdateDisplay();
         }
 
@@ -36,6 +49,36 @@ namespace Kanairo.UI
         {
             // Update display in real-time as sliders move or approval changes
             UpdateDisplay();
+        }
+
+        public void RegisterParty()
+        {
+            if (partyNameInput == null || string.IsNullOrEmpty(partyNameInput.text)) return;
+
+            string name = partyNameInput.text;
+            PlayerPrefs.SetString("PoliticalPartyName", name);
+            PlayerPrefs.SetInt("HasPoliticalParty", 1);
+            PlayerPrefs.Save();
+
+            hasParty = true;
+            UpdatePartyUI(name);
+            Debug.Log($"[PARTY] Registered party: {name}. Negotiation boost (20%) active.");
+        }
+
+        private void UpdatePartyUI(string name)
+        {
+            if (hasParty)
+            {
+                if (partyStatusText != null) partyStatusText.text = $"Party: {name}\nStatus: Registered\nBonus: +20% Negotiation";
+                if (registerButton != null) registerButton.SetActive(false);
+                if (partyNameInput != null) partyNameInput.gameObject.SetActive(false);
+            }
+            else
+            {
+                if (partyStatusText != null) partyStatusText.text = "No Party Registered";
+                if (registerButton != null) registerButton.SetActive(true);
+                if (partyNameInput != null) partyNameInput.gameObject.SetActive(true);
+            }
         }
 
         public void UpdateDisplay()

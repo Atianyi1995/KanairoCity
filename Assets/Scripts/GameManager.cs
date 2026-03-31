@@ -85,8 +85,23 @@ namespace Kanairo.Core
             
             // Handle UI Visibility (Tutorial handled via coroutine if state is Tutorial)
             if (tutorialCanvas != null && newState != GameState.Tutorial) tutorialCanvas.SetActive(false);
-            if (campaignCanvas != null) campaignCanvas.SetActive(newState == GameState.Campaigning || newState == GameState.OpponentTerm);
-            if (resultCanvas != null) resultCanvas.SetActive(newState == GameState.ElectionResult || newState == GameState.Victory || newState == GameState.Defeat);
+            
+            // Campaign UI stays active during all gameplay phases
+            if (campaignCanvas != null) 
+            {
+                campaignCanvas.SetActive(newState == GameState.Campaigning || 
+                                       newState == GameState.OpponentTerm || 
+                                       newState == GameState.InOffice || newState == GameState.Victory ||
+                                     newState == GameState.Defeat);
+                Debug.Log(newState);
+            }
+
+            if (resultCanvas != null) 
+            {
+                resultCanvas.SetActive(newState == GameState.Victory || 
+                                     newState == GameState.Defeat);
+            }
+
             if (officeCanvas != null) officeCanvas.SetActive(newState == GameState.InOffice);
             
             // Handle time scale, input, and cursor
@@ -94,7 +109,7 @@ namespace Kanairo.Core
             {
                 StartCoroutine(DelayedTutorialStart());
             }
-            else if (newState == GameState.MainMenu)
+            else if (newState == GameState.MainMenu || newState == GameState.ElectionResult || newState == GameState.Victory || newState == GameState.Defeat)
             {
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
@@ -102,20 +117,16 @@ namespace Kanairo.Core
             }
             else
             {
-                // Only lock cursor if we aren't in a menu or office computer
-                if (newState != GameState.ElectionResult && newState != GameState.Victory && newState != GameState.Defeat)
-                {
-                    // Start Coroutine to handle Invector's internal execution timing
-                    StartCoroutine(UnlockInputRoutine());
-                }
+                // States like Campaigning, OpponentTerm, and InOffice should unlock input
+                StartCoroutine(UnlockInputRoutine());
             }
 
             // Handle state entry logic here if needed
             switch (newState)
             {
                 case GameState.OpponentTerm:
-                    // Start the 30min wait for the next election
-                    if (CampaignManager.Instance != null) CampaignManager.Instance.StartOpponentTerm();
+                case GameState.InOffice:
+                    if (CampaignManager.Instance != null) CampaignManager.Instance.StartPostElectionTerm(newState == GameState.InOffice);
                     break;
             }
         }
@@ -135,22 +146,17 @@ namespace Kanairo.Core
                 input.lockMoveInput = locked;
                 input.lockCameraInput = locked;
 
-                if (locked)
+                var camera = Invector.vCamera.vThirdPersonCamera.instance;
+                if (camera != null)
                 {
-                    // Use the static instance as fallback if reference is lost
-                    var camera = Invector.vCamera.vThirdPersonCamera.instance;
-                    if (camera != null)
+                    if (locked)
                     {
                         camera.isFreezed = true;
                         input.SetLockCameraInput(true);
                         // Reset camera rotation to face the same direction as the player
                         camera.RotateCamera(input.transform.eulerAngles.y, 0);
                     }
-                }
-                else if (!locked)
-                {
-                    var camera = Invector.vCamera.vThirdPersonCamera.instance;
-                    if (camera != null)
+                    else
                     {
                         camera.isFreezed = false;
                         camera.isInit = true;
@@ -179,7 +185,15 @@ namespace Kanairo.Core
         }
         private IEnumerator UnlockInputRoutine()
         {
-            // First frame: Unlock basic state and force cursor
+            // First frame: Force cursor and stay locked
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+            LockPlayerInput(true);
+            
+            // Brief buffer delay to let the player get ready
+            //yield return new WaitForSecondsRealtime(2.0f);
+            
+            // Now unlock player input
             LockPlayerInput(false);
             
             // Re-find all player-related components
@@ -233,8 +247,7 @@ namespace Kanairo.Core
                 CampaignManager.Instance.StartCampaign(true);
             }
             
-            // Transition to Tutorial state with a delay (handled in ChangeState)
-            ChangeState(GameState.Tutorial);
+            // ChangeState is already handled inside StartCampaign(true)
         }
 
         public void ContinueCampaign()
@@ -247,7 +260,8 @@ namespace Kanairo.Core
                     CampaignManager.Instance.StartCampaign(false);
                 }
                 
-                ChangeState(GameState.Campaigning);
+                // ChangeState is already handled inside StartCampaign(false) 
+                // to correctly restore Campaigning, OpponentTerm, or InOffice
             }
             else
             {

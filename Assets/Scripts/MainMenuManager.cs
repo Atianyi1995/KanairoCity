@@ -14,6 +14,7 @@ namespace KanairoCity.UI
         [SerializeField] private GameObject characterPanel;
         [SerializeField] private GameObject statsPanel;
         [SerializeField] private GameObject modeSelectPanel;
+        [SerializeField] private GameObject multiplayerPanel;
         [SerializeField] private GameObject settingsPanel;
 
         [Header("Character Creator Integration")]
@@ -29,7 +30,7 @@ namespace KanairoCity.UI
 
         private void Awake()
         {
-            panels.AddRange(new[] { homePanel, characterPanel, statsPanel, modeSelectPanel, settingsPanel });
+            panels.AddRange(new[] { homePanel, characterPanel, statsPanel, modeSelectPanel, multiplayerPanel, settingsPanel });
             InitializePanels();
         }
 
@@ -44,8 +45,17 @@ namespace KanairoCity.UI
             if (characterCreatorCamera != null) characterCreatorCamera.SetActive(true);
             if (characterCreatorCanvas != null) characterCreatorCanvas.SetActive(false);
 
+            // Hide Multiplayer panel specifically if not in list
+            if (multiplayerPanel != null) multiplayerPanel.SetActive(false);
+
             // Start with Home Panel
             ShowPanel(homePanel);
+        }
+
+        public void ShowMultiplayer()
+        {
+            if (characterCreatorCanvas != null) characterCreatorCanvas.SetActive(false);
+            ShowPanel(multiplayerPanel);
         }
 
         public void ShowHome()
@@ -65,14 +75,14 @@ namespace KanairoCity.UI
         public void ShowStats()
         {
             if (characterCreatorCanvas != null) characterCreatorCanvas.SetActive(false);
-            if (characterCreatorRoot != null) characterCreatorRoot.SetActive(false);
+            // characterCreatorRoot remains active to keep the character visible in the background
             ShowPanel(statsPanel);
         }
 
         public void ShowModeSelect()
         {
             if (characterCreatorCanvas != null) characterCreatorCanvas.SetActive(false);
-            if (characterCreatorRoot != null) characterCreatorRoot.SetActive(false);
+            // characterCreatorRoot remains active to keep the character visible in the background
             ShowPanel(modeSelectPanel);
         }
 

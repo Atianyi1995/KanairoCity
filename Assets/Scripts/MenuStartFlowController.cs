@@ -107,7 +107,12 @@ namespace KanairoCity.UI
             
             // Swap Characters and Enable Gameplay
             SetInvectorState(true);
-            
+            StartCoroutine(ContinueDelay());
+        }
+        IEnumerator ContinueDelay()
+        {
+            yield return new WaitForSeconds(0.5f);
+
             // Continue the Campaign Logic via GameManager
             if (GameManager.Instance != null)
             {
@@ -123,7 +128,6 @@ namespace KanairoCity.UI
                 StartSinglePlayer();
             }
         }
-
         private void SetInvectorState(bool enabled)
         {
             // Toggle between Menu Character and Playable Character
@@ -174,9 +178,14 @@ namespace KanairoCity.UI
                 if (enabled && vInputComp != null) vInputComp.enabled = true;
             }
             
-            // Force cursor state immediately
-            Cursor.visible = !enabled;
-            Cursor.lockState = enabled ? CursorLockMode.Locked : CursorLockMode.None;
+            // Force cursor state immediately for menu
+            if (!enabled)
+            {
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+            }
+            // For enabled = true (Play), the cursor lock is handled by GameManager's 
+            // UnlockInputRoutine which includes a 1-second "buffer" delay.
         }
 
         private void StartSinglePlayer()

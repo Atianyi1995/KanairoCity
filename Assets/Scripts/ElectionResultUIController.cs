@@ -41,8 +41,9 @@ namespace Kanairo.UI
             else if (state == GameState.Defeat)
             {
                 defeatPanel.SetActive(true);
-                defeatPlayerPercent.text = "You lost due to lack of support and funding. The rival has taken office.";
-                defeatOpponentPercent.text = "However, you have 30 minutes until the next election cycle begins. Use this time to build public appeal!";
+                string rivalName = manager.RivalCandidate != null ? manager.RivalCandidate.candidateName : "The Rival";
+                defeatPlayerPercent.text = $"You lost to {rivalName} with only {manager.playerSupportPercent:F1}% support.";
+                defeatOpponentPercent.text = "However, you have 30 minutes while they are in office to rebuild your public appeal for the next election!";
             }
         }
 
@@ -54,6 +55,22 @@ namespace Kanairo.UI
         public void EnterOffice()
         {
             GameManager.Instance.ChangeState(GameState.InOffice);
+        }
+
+        /// <summary>
+        /// General continue method that can be used for both Victory and Defeat buttons
+        /// </summary>
+        public void ContinueToPostElection()
+        {
+            GameState state = GameManager.Instance.CurrentState;
+            if (state == GameState.Victory)
+            {
+                EnterOffice();
+            }
+            else if (state == GameState.Defeat)
+            {
+                AcceptDefeat();
+            }
         }
 
         public void ExitGame()
