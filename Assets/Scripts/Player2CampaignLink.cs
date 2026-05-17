@@ -28,6 +28,17 @@ namespace Kanairo.Core
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
             sb.AppendLine($"Your name is {votingProfile.npcName} and your role in Kanairo is {votingProfile.role}.");
             sb.AppendLine($"The election is coming up. You care most about {votingProfile.primaryNeed} and your second priority is {votingProfile.secondaryNeed}.");
+
+            // Add Political Party Awareness
+            if (PlayerPrefs.GetInt("HasPoliticalParty", 0) == 1)
+            {
+                string partyName = PlayerPrefs.GetString("PoliticalPartyName", "Fimbo");
+                sb.AppendLine($"The player has joined the {partyName} party. This makes them look more professional and serious as a candidate.");
+            }
+            else
+            {
+                sb.AppendLine("The player is currently an independent candidate with no party backing.");
+            }
             
             if (votingProfile.currentSupportedCandidate != null)
             {

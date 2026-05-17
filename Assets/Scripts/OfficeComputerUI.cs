@@ -6,6 +6,11 @@ namespace Kanairo.UI
 {
     public class OfficeComputerUI : MonoBehaviour
     {
+        [Header("Panels")]
+        public GameObject homePanel;
+        public GameObject budgetPanel;
+        public GameObject partyPanel;
+
         [Header("References")]
         public Slider securitySlider;
         public Slider cleanlinessSlider;
@@ -15,7 +20,6 @@ namespace Kanairo.UI
         public TMP_InputField partyNameInput;
         public GameObject registerButton;
         public TextMeshProUGUI partyStatusText;
-        public GameObject partyPanel;
 
         [Header("BudgetTexts")]
         public TextMeshProUGUI totalBudgetText;
@@ -29,6 +33,8 @@ namespace Kanairo.UI
 
         private void OnEnable()
         {
+            ShowHome();
+            
             var manager = Core.OfficeBudgetManager.Instance;
             if (manager == null) return;
 
@@ -45,6 +51,27 @@ namespace Kanairo.UI
             UpdateDisplay();
         }
 
+        public void ShowHome()
+        {
+            if (homePanel) homePanel.SetActive(true);
+            if (budgetPanel) budgetPanel.SetActive(false);
+            if (partyPanel) partyPanel.SetActive(false);
+        }
+
+        public void ShowBudget()
+        {
+            if (homePanel) homePanel.SetActive(false);
+            if (budgetPanel) budgetPanel.SetActive(true);
+            if (partyPanel) partyPanel.SetActive(false);
+        }
+
+        public void ShowParty()
+        {
+            if (homePanel) homePanel.SetActive(false);
+            if (budgetPanel) budgetPanel.SetActive(false);
+            if (partyPanel) partyPanel.SetActive(true);
+        }
+
         private void Update()
         {
             // Update display in real-time as sliders move or approval changes
@@ -58,6 +85,7 @@ namespace Kanairo.UI
             string name = partyNameInput.text;
             PlayerPrefs.SetString("PoliticalPartyName", name);
             PlayerPrefs.SetInt("HasPoliticalParty", 1);
+            PlayerPrefs.SetFloat("PartyApprovalMultiplier", 1.2f); // Default for manual registration
             PlayerPrefs.Save();
 
             hasParty = true;

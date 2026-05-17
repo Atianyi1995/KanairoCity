@@ -9,10 +9,15 @@ namespace Kanairo.Core
 
         private bool playerInRange;
 
+        public GameObject UIHolder;
         private void OnTriggerEnter(Collider other)
         {
             if (other.CompareTag("Player"))
+            {
+                UIHolder.SetActive(true);
                 playerInRange = true;
+            }
+                
         }
 
         private void OnTriggerExit(Collider other)
@@ -20,7 +25,7 @@ namespace Kanairo.Core
             if (other.CompareTag("Player"))
             {
                 playerInRange = false;
-                computerUIPanel.SetActive(false);
+                UIHolder.SetActive(false);
             }
         }
 

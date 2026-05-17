@@ -27,6 +27,12 @@ namespace Kanairo.Core
             {
                 OpenDialogue();
             }
+
+            // Quick key for Rally if you are a leader (can be moved to UI)
+            if (Input.GetKeyDown(KeyCode.R) && PlayerPrefs.GetInt("HasPoliticalParty", 0) == 1)
+            {
+                Kanairo.Multiplayer.RallyManager.Instance?.HoldRally();
+            }
         }
 
         private void DetectNPC()

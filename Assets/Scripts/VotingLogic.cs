@@ -96,10 +96,11 @@ namespace Kanairo.Core
                 }
             }
 
-            // Apply Political Party negotiation boost (20%) for the player
+            // Apply Political Party negotiation boost from Party Leader
             if (isPlayer && PlayerPrefs.GetInt("HasPoliticalParty", 0) == 1)
             {
-                change *= 1.2f;
+                float multiplier = PlayerPrefs.GetFloat("PartyApprovalMultiplier", 1.2f);
+                change *= multiplier;
             }
 
             Debug.Log($"[LOGIC] Calculating trust for {(isPlayer ? "Player" : "Rival")}. Promise: {promise}. Need: {primaryNeed}. Final Change: {change}");
