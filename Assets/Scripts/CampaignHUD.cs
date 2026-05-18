@@ -10,14 +10,31 @@ namespace Kanairo.Core
         public TextMeshProUGUI undecidedText;
         public TextMeshProUGUI timerText;
 
+        [Header("Multiplayer Settings")]
+        [Tooltip("If true, only player percentage is shown during campaign")]
+        public bool privateCampaignMode = true;
+
         private void Update()
         {
             if (CampaignManager.Instance == null) return;
 
             var manager = CampaignManager.Instance;
-            playerSupportText.text = $"Player: {manager.playerSupportPercent:F1}%";
-            rivalSupportText.text = $"Rival: {manager.rivalSupportPercent:F1}%";
-            undecidedText.text = $"Undecided: {manager.undecidedPercent:F1}%";
+            
+            // Only show player percentage if private mode is on
+            playerSupportText.text = $"My Support: {manager.playerSupportPercent:F1}%";
+            
+            if (privateCampaignMode)
+            {
+                rivalSupportText.gameObject.SetActive(false);
+                undecidedText.gameObject.SetActive(false);
+            }
+            else
+            {
+                rivalSupportText.gameObject.SetActive(true);
+                undecidedText.gameObject.SetActive(true);
+                rivalSupportText.text = $"Opponents: {manager.rivalSupportPercent:F1}%";
+                undecidedText.text = $"Undecided: {manager.undecidedPercent:F1}%";
+            }
             
             float time = manager.GetRemainingTime();
             int minutes = Mathf.FloorToInt(time / 60);

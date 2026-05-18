@@ -280,5 +280,20 @@ namespace Kanairo.Core
         {
             PlayerPrefs.SetInt("Tot", 1);
         }
+
+        public void StartMultiplayerGame()
+        {
+            // Set tutorial as finished for multiplayer to skip tutorial canvas
+            SetTut();
+            
+            // Start campaign logic (handles NPC loading and initial percentages)
+            if (CampaignManager.Instance != null)
+            {
+                CampaignManager.Instance.StartCampaign(false);
+            }
+
+            // Immediately change state to Campaigning to hide menu and enable player control
+            ChangeState(GameState.Campaigning);
+        }
     }
 }

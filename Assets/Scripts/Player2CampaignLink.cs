@@ -42,11 +42,14 @@ namespace Kanairo.Core
             
             if (votingProfile.currentSupportedCandidate != null)
             {
-                sb.AppendLine($"You currently support: {votingProfile.currentSupportedCandidate.candidateName}.");
+                if (votingProfile.currentSupportedCandidate == CampaignManager.Instance.PlayerCandidate)
+                    sb.AppendLine("You are satisfied with the player's campaign so far and you are leaning towards supporting them.");
+                else
+                    sb.AppendLine($"You currently feel aligned with {votingProfile.currentSupportedCandidate.candidateName}, which makes the player your opponent for now.");
             }
             else
             {
-                sb.AppendLine("You are currently undecided on who to vote for.");
+                sb.AppendLine("You are currently undecided on who to vote for and open to being persuaded by the player.");
             }
 
             sb.AppendLine($"Trust in Player: {votingProfile.trustInPlayer}. Trust in Rival: {votingProfile.trustInRival}.");

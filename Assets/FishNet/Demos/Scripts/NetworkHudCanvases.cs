@@ -208,7 +208,12 @@ namespace FishNet.Example
             if (_serverState != LocalConnectionState.Stopped)
                 _networkManager.ServerManager.StopConnection(true);
             else
+            {
                 _networkManager.ServerManager.StartConnection();
+                // Use SendMessage to avoid assembly reference errors
+                GameObject gm = GameObject.Find("GameManager");
+                if (gm != null) gm.SendMessage("StartMultiplayerGame", SendMessageOptions.DontRequireReceiver);
+            }
 
             DeselectButtons();
         }
@@ -221,7 +226,12 @@ namespace FishNet.Example
             if (_clientState != LocalConnectionState.Stopped)
                 _networkManager.ClientManager.StopConnection();
             else
+            {
                 _networkManager.ClientManager.StartConnection();
+                // Use SendMessage to avoid assembly reference errors
+                GameObject gm = GameObject.Find("GameManager");
+                if (gm != null) gm.SendMessage("StartMultiplayerGame", SendMessageOptions.DontRequireReceiver);
+            }
 
             DeselectButtons();
         }
