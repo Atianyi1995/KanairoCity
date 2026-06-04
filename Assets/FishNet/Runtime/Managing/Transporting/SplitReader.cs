@@ -1,18 +1,17 @@
 ﻿using FishNet.Serializing;
 using System;
-using GameKit.Dependencies.Utilities;
 using UnityEngine;
 
 namespace FishNet.Managing.Transporting
 {
-    internal class SplitReader : IResettable
+    internal class SplitReader
     {
-        
         #region Private.
         /// <summary>
-        /// Writer containing the combined split packet.
+        /// Tick split is for.
+        /// Tick must be a negative value so that it's impossible for the first tick to align.
         /// </summary>
-        private readonly PooledWriter _writer = new();
+        private long _tick = -1;
         /// <summary>
         /// Expected number of splits.
         /// </summary>
@@ -22,52 +21,40 @@ namespace FishNet.Managing.Transporting
         /// </summary>
         private ushort _receivedMessages;
         /// <summary>
-        /// The maximum allowed bytes which can be read. This acts as a guard against overflow.
+        /// Writer containing split packet combined.
         /// </summary>
-        private uint _maximumClientBytes;
-        /// <summary>
-        /// NetworkManager for this.
-        /// </summary>
-        private NetworkManager _networkManager;
-        /// <summary>
-        /// True if the sender of the split packet is a client.
-        /// </summary>
-        /// <returns></returns>
-        private bool _isSenderClient;
+        private PooledWriter _writer = WriterPool.Retrieve();
         #endregion
 
-        public void Initialize(NetworkManager networkManager, uint maximumClientBytes, bool isSenderClient, int expectedMessages)
+        internal SplitReader()
         {
-            _networkManager = networkManager;
-            _maximumClientBytes = maximumClientBytes;
-            _isSenderClient = isSenderClient;
-            _expectedMessages = expectedMessages;
-            
-            
+            // Increase capacity to reduce the chance of resizing.
+            _writer.EnsureBufferCapacity(20000);
+        }
+
+        /// <summary>
+        /// Gets split header values.
+        /// </summary>
+        internal void GetHeader(PooledReader reader, out int expectedMessages)
+        {
+            expectedMessages = reader.ReadInt32();
+        }
+
+        /// <summary>
+        /// Combines split data.
+        /// </summary>
+        internal void Write(uint tick, PooledReader reader, int expectedMessages)
+        {
+            // New tick which means new split.
+            if (tick != _tick)
+                Reset(tick, expectedMessages);
+
             /* This is just a guess as to how large the end
              * message could be. If the writer is not the minimum
              * of this length then resize it. */
             int estimatedBufferSize = expectedMessages * 1500;
             if (_writer.Capacity < estimatedBufferSize)
                 _writer.EnsureBufferCapacity(estimatedBufferSize);
-        }
-
-        /// <summary>
-        /// Combines split data.
-        /// </summary>
-        internal bool Write(PooledReader reader)
-        {
-            if (_isSenderClient)
-            {
-                long totalBytes = _writer.Length + reader.Remaining;
-
-                if (totalBytes > _maximumClientBytes)
-                {
-                    _networkManager.LogError($"A split packet of [{totalBytes}] exceeds the maximum allowed bytes of [{_maximumClientBytes}].");
-                    return false;
-                }
-            }
-            
             /* Empty remainder of reader into the writer.
              * It does not matter if parts of the reader
              * contain data added after the split because
@@ -76,40 +63,33 @@ namespace FishNet.Managing.Transporting
              * which is how data is normally read. */
             ArraySegment<byte> data = reader.ReadArraySegment(reader.Remaining);
             _writer.WriteArraySegment(data);
-
-            
             _receivedMessages++;
-            
-            return true;
         }
 
         /// <summary>
         /// Returns if all split messages have been received.
         /// </summary>
         /// <returns></returns>
-        internal bool TryGetFullMessage(out ArraySegment<byte> segment)
+        internal ArraySegment<byte> GetFullMessage()
         {
             if (_receivedMessages < _expectedMessages)
             {
-                segment = ArraySegment<byte>.Empty;
-                return false;
+                return default;
             }
-
-            segment = _writer.GetArraySegment();
-            return true;
+            else
+            {
+                ArraySegment<byte> segment = _writer.GetArraySegment();
+                Reset();
+                return segment;
+            }
         }
 
-        public void ResetState()
+        private void Reset(uint tick = 0, int expectedMessages = 0)
         {
-            _writer.Clear();
-            
-            _expectedMessages = 0;
+            _tick = tick;
             _receivedMessages = 0;
-            _maximumClientBytes = 0;
-
-            _networkManager = null;
+            _expectedMessages = expectedMessages;
+            _writer.Clear();
         }
-
-        public void InitializeState() { }
     }
 }

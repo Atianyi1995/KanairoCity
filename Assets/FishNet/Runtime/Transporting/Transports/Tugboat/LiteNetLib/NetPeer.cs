@@ -90,6 +90,19 @@ namespace LiteNetLib
         private const int MaxMtuCheckAttempts = 4;
         private readonly object _mtuMutex = new();
 
+        // Fragment
+        private class IncomingFragments
+        {
+            public NetPacket[] Fragments;
+            public int ReceivedCount;
+            public int TotalSize;
+            public byte ChannelId;
+        }
+
+        private int _fragmentId;
+        private readonly Dictionary<ushort, IncomingFragments> _holdedFragments;
+        private readonly Dictionary<ushort, ushort> _deliveredFragments;
+
         // Merging
         private readonly NetPacket _mergeData;
         private int _mergePos;
@@ -207,6 +220,8 @@ namespace LiteNetLib
             _pingPacket = new(PacketProperty.Ping, 0) { Sequence = 1 };
 
             _unreliableChannel = new();
+            _holdedFragments = new();
+            _deliveredFragments = new();
 
             _channels = new BaseChannel[netManager.ChannelsCount * NetConstants.ChannelTypeCount];
             _channelSendQueue = new();
@@ -273,7 +288,7 @@ namespace LiteNetLib
         public int GetPacketsCountInReliableQueue(byte channelNumber, bool ordered)
         {
             int idx = channelNumber * NetConstants.ChannelTypeCount + (byte)(ordered ? DeliveryMethod.ReliableOrdered : DeliveryMethod.ReliableUnordered);
-            BaseChannel channel = _channels[idx];
+            var channel = _channels[idx];
             return channel != null ? ((ReliableChannel)channel).PacketsInQueue : 0;
         }
 
@@ -287,7 +302,7 @@ namespace LiteNetLib
         {
             // multithreaded variable
             int mtu = Mtu;
-            NetPacket packet = NetManager.PoolGetPacket(mtu);
+            var packet = NetManager.PoolGetPacket(mtu);
             if (deliveryMethod == DeliveryMethod.Unreliable)
             {
                 packet.Property = PacketProperty.Unreliable;
@@ -624,8 +639,44 @@ namespace LiteNetLib
             int mtu = Mtu;
             if (length + headerSize > mtu)
             {
-                NetDebug.WriteError($"Packet size {length + headerSize} exceeds MTU {mtu}. Fragmentation is disabled.");
-                throw new TooBigPacketException($"Packet size {length + headerSize} exceeded MTU {mtu}. LNL Fragmentation was removed.");
+                // if cannot be fragmented
+                if (deliveryMethod != DeliveryMethod.ReliableOrdered && deliveryMethod != DeliveryMethod.ReliableUnordered)
+                    throw new TooBigPacketException("Unreliable or ReliableSequenced packet size exceeded maximum of " + (mtu - headerSize) + " bytes, Check allowed size by GetMaxSinglePacketSize()");
+
+                int packetFullSize = mtu - headerSize;
+                int packetDataSize = packetFullSize - NetConstants.FragmentHeaderSize;
+                int totalPackets = length / packetDataSize + (length % packetDataSize == 0 ? 0 : 1);
+
+                NetDebug.Write($@"FragmentSend:
+ MTU: {mtu}
+ headerSize: {headerSize}
+ packetFullSize: {packetFullSize}
+ packetDataSize: {packetDataSize}
+ totalPackets: {totalPackets}");
+
+                if (totalPackets > ushort.MaxValue)
+                    throw new TooBigPacketException("Data was split in " + totalPackets + " fragments, which exceeds " + ushort.MaxValue);
+
+                ushort currentFragmentId = (ushort)Interlocked.Increment(ref _fragmentId);
+
+                for (ushort partIdx = 0; partIdx < totalPackets; partIdx++)
+                {
+                    int sendLength = length > packetDataSize ? packetDataSize : length;
+
+                    NetPacket p = NetManager.PoolGetPacket(headerSize + sendLength + NetConstants.FragmentHeaderSize);
+                    p.Property = property;
+                    p.UserData = userData;
+                    p.FragmentId = currentFragmentId;
+                    p.FragmentPart = partIdx;
+                    p.FragmentsTotal = (ushort)totalPackets;
+                    p.MarkFragmented();
+
+                    Buffer.BlockCopy(data, start + partIdx * packetDataSize, p.RawData, NetConstants.FragmentedHeaderTotalSize, sendLength);
+                    channel.AddToQueue(p);
+
+                    length -= sendLength;
+                }
+                return;
             }
 
             // Else just send
@@ -732,8 +783,37 @@ namespace LiteNetLib
             int length = data.Length;
             if (length + headerSize > mtu)
             {
-                NetDebug.WriteError($"Packet size {length + headerSize} exceeds MTU {mtu}. Fragmentation is disabled.");
-                throw new TooBigPacketException($"Packet size {length + headerSize} exceeded MTU {mtu}. LNL Fragmentation was removed.");
+                // if cannot be fragmented
+                if (deliveryMethod != DeliveryMethod.ReliableOrdered && deliveryMethod != DeliveryMethod.ReliableUnordered)
+                    throw new TooBigPacketException("Unreliable or ReliableSequenced packet size exceeded maximum of " + (mtu - headerSize) + " bytes, Check allowed size by GetMaxSinglePacketSize()");
+
+                int packetFullSize = mtu - headerSize;
+                int packetDataSize = packetFullSize - NetConstants.FragmentHeaderSize;
+                int totalPackets = length / packetDataSize + (length % packetDataSize == 0 ? 0 : 1);
+
+                if (totalPackets > ushort.MaxValue)
+                    throw new TooBigPacketException("Data was split in " + totalPackets + " fragments, which exceeds " + ushort.MaxValue);
+
+                ushort currentFragmentId = (ushort)Interlocked.Increment(ref _fragmentId);
+
+                for (ushort partIdx = 0; partIdx < totalPackets; partIdx++)
+                {
+                    int sendLength = length > packetDataSize ? packetDataSize : length;
+
+                    NetPacket p = NetManager.PoolGetPacket(headerSize + sendLength + NetConstants.FragmentHeaderSize);
+                    p.Property = property;
+                    p.UserData = userData;
+                    p.FragmentId = currentFragmentId;
+                    p.FragmentPart = partIdx;
+                    p.FragmentsTotal = (ushort)totalPackets;
+                    p.MarkFragmented();
+
+                    data.Slice(partIdx * packetDataSize, sendLength).CopyTo(new(p.RawData, NetConstants.FragmentedHeaderTotalSize, sendLength));
+                    channel.AddToQueue(p);
+
+                    length -= sendLength;
+                }
+                return;
             }
 
             // Else just send
@@ -800,7 +880,7 @@ namespace LiteNetLib
                     return ShutdownResult.None;
                 }
 
-                ShutdownResult result = ConnectionState == ConnectionState.Connected ? ShutdownResult.WasConnected : ShutdownResult.Success;
+                var result = ConnectionState == ConnectionState.Connected ? ShutdownResult.WasConnected : ShutdownResult.Success;
 
                 // don't send anything
                 if (force)
@@ -843,12 +923,84 @@ namespace LiteNetLib
         {
             if (p.IsFragmented)
             {
-                NetDebug.WriteError("Fragmented packets are disabled. Dropping packet.");
-                NetManager.PoolRecycle(p);
-                return;
-            }
+                NetDebug.Write($"Fragment. Id: {p.FragmentId}, Part: {p.FragmentPart}, Total: {p.FragmentsTotal}");
+                //Get needed array from dictionary
+                ushort packetFragId = p.FragmentId;
+                byte packetChannelId = p.ChannelId;
+                if (!_holdedFragments.TryGetValue(packetFragId, out var incomingFragments))
+                {
+                    incomingFragments = new()
+                    {
+                        Fragments = new NetPacket[p.FragmentsTotal],
+                        ChannelId = p.ChannelId
+                    };
+                    _holdedFragments.Add(packetFragId, incomingFragments);
+                }
 
-            NetManager.CreateReceiveEvent(p, method, (byte)(p.ChannelId / NetConstants.ChannelTypeCount), NetConstants.ChanneledHeaderSize, this);
+                //Cache
+                var fragments = incomingFragments.Fragments;
+
+                //Error check
+                if (p.FragmentPart >= fragments.Length || fragments[p.FragmentPart] != null || p.ChannelId != incomingFragments.ChannelId)
+                {
+                    NetManager.PoolRecycle(p);
+                    NetDebug.WriteError("Invalid fragment packet");
+                    return;
+                }
+                //Fill array
+                fragments[p.FragmentPart] = p;
+
+                //Increase received fragments count
+                incomingFragments.ReceivedCount++;
+
+                //Increase total size
+                incomingFragments.TotalSize += p.Size - NetConstants.FragmentedHeaderTotalSize;
+
+                //Check for finish
+                if (incomingFragments.ReceivedCount != fragments.Length)
+                    return;
+
+                //just simple packet
+                NetPacket resultingPacket = NetManager.PoolGetPacket(incomingFragments.TotalSize);
+
+                int pos = 0;
+                for (int i = 0; i < incomingFragments.ReceivedCount; i++)
+                {
+                    var fragment = fragments[i];
+                    int writtenSize = fragment.Size - NetConstants.FragmentedHeaderTotalSize;
+
+                    if (pos + writtenSize > resultingPacket.RawData.Length)
+                    {
+                        _holdedFragments.Remove(packetFragId);
+                        NetDebug.WriteError($"Fragment error pos: {pos + writtenSize} >= resultPacketSize: {resultingPacket.RawData.Length} , totalSize: {incomingFragments.TotalSize}");
+                        return;
+                    }
+                    if (fragment.Size > fragment.RawData.Length)
+                    {
+                        _holdedFragments.Remove(packetFragId);
+                        NetDebug.WriteError($"Fragment error size: {fragment.Size} > fragment.RawData.Length: {fragment.RawData.Length}");
+                        return;
+                    }
+
+                    //Create resulting big packet
+                    Buffer.BlockCopy(fragment.RawData, NetConstants.FragmentedHeaderTotalSize, resultingPacket.RawData, pos, writtenSize);
+                    pos += writtenSize;
+
+                    //Free memory
+                    NetManager.PoolRecycle(fragment);
+                    fragments[i] = null;
+                }
+
+                //Clear memory
+                _holdedFragments.Remove(packetFragId);
+
+                //Send to process
+                NetManager.CreateReceiveEvent(resultingPacket, method, (byte)(packetChannelId / NetConstants.ChannelTypeCount), 0, this);
+            }
+            else //Just simple packet
+            {
+                NetManager.CreateReceiveEvent(p, method, (byte)(p.ChannelId / NetConstants.ChannelTypeCount), NetConstants.ChanneledHeaderSize, this);
+            }
         }
 
         private void ProcessMtuPacket(NetPacket packet)
@@ -915,7 +1067,7 @@ namespace LiteNetLib
 
                 //Send increased packet
                 int newMtu = NetConstants.PossibleMtu[_mtuIdx + 1] - NetManager.ExtraPacketSizeForLayer;
-                NetPacket p = NetManager.PoolGetPacket(newMtu);
+                var p = NetManager.PoolGetPacket(newMtu);
                 p.Property = PacketProperty.MtuCheck;
                 FastBitConverter.GetBytes(p.RawData, 1, newMtu); //place into start
                 FastBitConverter.GetBytes(p.RawData, p.Size - 4, newMtu); //and end of packet
@@ -941,7 +1093,7 @@ namespace LiteNetLib
                     //slow rare case check
                     if (connRequest.ConnectionTime == ConnectTime)
                     {
-                        byte[] localBytes = connRequest.TargetAddress;
+                        var localBytes = connRequest.TargetAddress;
                         for (int i = _cachedSocketAddr.Size - 1; i >= 0; i--)
                         {
                             byte rb = _cachedSocketAddr[i];
@@ -1008,10 +1160,6 @@ namespace LiteNetLib
                     while (pos < packet.Size)
                     {
                         ushort size = BitConverter.ToUInt16(packet.RawData, pos);
-                        if (size == 0)
-                        {
-                            break;
-                        }
                         pos += 2;
                         if (packet.RawData.Length - pos < size)
                             break;
@@ -1061,7 +1209,7 @@ namespace LiteNetLib
                         NetManager.PoolRecycle(packet);
                         break;
                     }
-                    BaseChannel channel = _channels[packet.ChannelId] ?? (packet.Property == PacketProperty.Ack ? null : CreateChannel(packet.ChannelId));
+                    var channel = _channels[packet.ChannelId] ?? (packet.Property == PacketProperty.Ack ? null : CreateChannel(packet.ChannelId));
                     if (channel != null)
                     {
                         if (!channel.ProcessPacket(packet))
@@ -1221,7 +1369,7 @@ namespace LiteNetLib
             int count = _channelSendQueue.Count;
             while (count-- > 0)
             {
-                if (!_channelSendQueue.TryDequeue(out BaseChannel channel))
+                if (!_channelSendQueue.TryDequeue(out var channel))
                     break;
                 if (channel.SendAndCheckQueue())
                 {
@@ -1235,7 +1383,7 @@ namespace LiteNetLib
                 int unreliableCount = _unreliableChannel.Count;
                 for (int i = 0; i < unreliableCount; i++)
                 {
-                    NetPacket packet = _unreliableChannel.Dequeue();
+                    var packet = _unreliableChannel.Dequeue();
                     SendUserData(packet);
                     NetManager.PoolRecycle(packet);
                 }
@@ -1249,7 +1397,24 @@ namespace LiteNetLib
         {
             if (packet.UserData != null)
             {
-                NetManager.MessageDelivered(this, packet.UserData);
+                if (packet.IsFragmented)
+                {
+                    _deliveredFragments.TryGetValue(packet.FragmentId, out ushort fragCount);
+                    fragCount++;
+                    if (fragCount == packet.FragmentsTotal)
+                    {
+                        NetManager.MessageDelivered(this, packet.UserData);
+                        _deliveredFragments.Remove(packet.FragmentId);
+                    }
+                    else
+                    {
+                        _deliveredFragments[packet.FragmentId] = fragCount;
+                    }
+                }
+                else
+                {
+                    NetManager.MessageDelivered(this, packet.UserData);
+                }
                 packet.UserData = null;
             }
             NetManager.PoolRecycle(packet);

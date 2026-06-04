@@ -83,7 +83,7 @@ namespace MonoFN.Cecil
 
             if (module.HasImage && module.ReadingMode == ReadingMode.Deferred)
             {
-                ImmediateModuleReader immediate_reader = new(module.Image);
+                var immediate_reader = new ImmediateModuleReader(module.Image);
                 immediate_reader.ReadModule(module, resolve_attributes: false);
                 immediate_reader.ReadSymbols(module);
             }
@@ -93,10 +93,10 @@ namespace MonoFN.Cecil
             if (module.symbol_reader != null)
                 module.symbol_reader.Dispose();
 
-            AssemblyNameDefinition name = module.assembly != null && module.kind != ModuleKind.NetModule ? module.assembly.Name : null;
-            string fq_name = stream.value.GetFileName();
-            uint timestamp = parameters.Timestamp ?? module.timestamp;
-            ISymbolWriterProvider symbol_writer_provider = parameters.SymbolWriterProvider;
+            var name = module.assembly != null && module.kind != ModuleKind.NetModule ? module.assembly.Name : null;
+            var fq_name = stream.value.GetFileName();
+            var timestamp = parameters.Timestamp ?? module.timestamp;
+            var symbol_writer_provider = parameters.SymbolWriterProvider;
 
             if (symbol_writer_provider == null && parameters.WriteSymbols)
                 symbol_writer_provider = new DefaultSymbolWriterProvider();
@@ -110,12 +110,12 @@ namespace MonoFN.Cecil
             if (parameters.DeterministicMvid)
                 module.Mvid = Guid.Empty;
 
-            MetadataBuilder metadata = new(module, fq_name, timestamp, symbol_writer_provider);
+            var metadata = new MetadataBuilder(module, fq_name, timestamp, symbol_writer_provider);
             try
             {
                 module.metadata_builder = metadata;
 
-                using (ISymbolWriter symbol_writer = GetSymbolWriter(module, fq_name, symbol_writer_provider, parameters))
+                using (var symbol_writer = GetSymbolWriter(module, fq_name, symbol_writer_provider, parameters))
                 {
                     metadata.SetSymbolWriter(symbol_writer);
                     BuildMetadata(module, metadata);
@@ -123,7 +123,7 @@ namespace MonoFN.Cecil
                     if (parameters.DeterministicMvid)
                         metadata.ComputeDeterministicMvid();
 
-                    ImageWriter writer = ImageWriter.CreateWriter(module, metadata, stream);
+                    var writer = ImageWriter.CreateWriter(module, metadata, stream);
                     stream.value.SetLength(0);
                     writer.WriteImage();
 
@@ -205,7 +205,7 @@ namespace MonoFN.Cecil
 
         private void Grow()
         {
-            TRow[] rows = new TRow [this.rows.Length * 2];
+            var rows = new TRow [this.rows.Length * 2];
             Array.Copy(this.rows, rows, this.rows.Length);
             this.rows = rows;
         }
@@ -930,7 +930,7 @@ namespace MonoFN.Cecil
             typespec_table = GetTable<TypeSpecTable>(Table.TypeSpec);
             method_spec_table = GetTable<MethodSpecTable>(Table.MethodSpec);
 
-            RowEqualityComparer row_equality_comparer = new();
+            var row_equality_comparer = new RowEqualityComparer();
             type_ref_map = new(row_equality_comparer);
             type_spec_map = new();
             member_ref_map = new(row_equality_comparer);
@@ -972,7 +972,7 @@ namespace MonoFN.Cecil
             state_machine_method_table = GetTable<StateMachineMethodTable>(Table.StateMachineMethod);
             custom_debug_information_table = GetTable<CustomDebugInformationTable>(Table.CustomDebugInformation);
 
-            RowEqualityComparer row_equality_comparer = new();
+            var row_equality_comparer = new RowEqualityComparer();
 
             document_map = new();
             import_scope_map = new(row_equality_comparer);
@@ -988,7 +988,7 @@ namespace MonoFN.Cecil
 
         private TextMap CreateTextMap()
         {
-            TextMap map = new();
+            var map = new TextMap();
             map.AddMap(TextSegment.ImportAddressTable, module.Architecture == TargetArchitecture.I386 ? 8 : 0);
             map.AddMap(TextSegment.CLIHeader, 0x48, 8);
             return map;
@@ -1039,11 +1039,11 @@ namespace MonoFN.Cecil
 
         private void BuildModule()
         {
-            ModuleTable table = GetTable<ModuleTable>(Table.Module);
+            var table = GetTable<ModuleTable>(Table.Module);
             table.row.Col1 = GetStringIndex(module.Name);
             table.row.Col2 = GetGuidIndex(module.Mvid);
 
-            AssemblyDefinition assembly = module.Assembly;
+            var assembly = module.Assembly;
 
             if (module.kind != ModuleKind.NetModule && assembly != null)
                 BuildAssembly();
@@ -1080,10 +1080,10 @@ namespace MonoFN.Cecil
 
         private void BuildAssembly()
         {
-            AssemblyDefinition assembly = module.Assembly;
-            AssemblyNameDefinition name = assembly.Name;
+            var assembly = module.Assembly;
+            var name = assembly.Name;
 
-            AssemblyTable table = GetTable<AssemblyTable>(Table.Assembly);
+            var table = GetTable<AssemblyTable>(Table.Assembly);
 
             table.row = new(name.HashAlgorithm, (ushort)name.Version.Major, (ushort)name.Version.Minor, (ushort)name.Version.Build, (ushort)name.Version.Revision, name.Attributes, GetBlobIndex(name.PublicKey), GetStringIndex(name.Name), GetStringIndex(name.Culture));
 
@@ -1093,27 +1093,27 @@ namespace MonoFN.Cecil
 
         private void BuildModules()
         {
-            Collection<ModuleDefinition> modules = this.module.Assembly.Modules;
-            FileTable table = GetTable<FileTable>(Table.File);
+            var modules = this.module.Assembly.Modules;
+            var table = GetTable<FileTable>(Table.File);
 
             for (int i = 0; i < modules.Count; i++)
             {
-                ModuleDefinition module = modules[i];
+                var module = modules[i];
                 if (module.IsMain)
                     continue;
 
 #if NET_CORE
 	            throw new NotSupportedException();
 #else
-                WriterParameters parameters = new()
+                var parameters = new WriterParameters
                 {
                     SymbolWriterProvider = symbol_writer_provider
                 };
 
-                string file_name = GetModuleFileName(module.Name);
+                var file_name = GetModuleFileName(module.Name);
                 module.Write(file_name, parameters);
 
-                byte[] hash = CryptoService.ComputeHash(file_name);
+                var hash = CryptoService.ComputeHash(file_name);
 
                 table.AddRow(new(FileAttributes.ContainsMetaData, GetStringIndex(module.Name), GetBlobIndex(hash)));
 #endif
@@ -1126,28 +1126,28 @@ namespace MonoFN.Cecil
             if (string.IsNullOrEmpty(name))
                 throw new NotSupportedException();
 
-            string path = Path.GetDirectoryName(fq_name);
+            var path = Path.GetDirectoryName(fq_name);
             return Path.Combine(path, name);
         }
 #endif
 
         private void AddAssemblyReferences()
         {
-            Collection<AssemblyNameReference> references = module.AssemblyReferences;
-            AssemblyRefTable table = GetTable<AssemblyRefTable>(Table.AssemblyRef);
+            var references = module.AssemblyReferences;
+            var table = GetTable<AssemblyRefTable>(Table.AssemblyRef);
 
             if (module.IsWindowsMetadata())
                 module.Projections.RemoveVirtualReferences(references);
 
             for (int i = 0; i < references.Count; i++)
             {
-                AssemblyNameReference reference = references[i];
+                var reference = references[i];
 
-                byte[] key_or_token = reference.PublicKey.IsNullOrEmpty() ? reference.PublicKeyToken : reference.PublicKey;
+                var key_or_token = reference.PublicKey.IsNullOrEmpty() ? reference.PublicKeyToken : reference.PublicKey;
 
-                Version version = reference.Version;
+                var version = reference.Version;
 
-                int rid = table.AddRow(new((ushort)version.Major, (ushort)version.Minor, (ushort)version.Build, (ushort)version.Revision, reference.Attributes, GetBlobIndex(key_or_token), GetStringIndex(reference.Name), GetStringIndex(reference.Culture), GetBlobIndex(reference.Hash)));
+                var rid = table.AddRow(new((ushort)version.Major, (ushort)version.Minor, (ushort)version.Build, (ushort)version.Revision, reference.Attributes, GetBlobIndex(key_or_token), GetStringIndex(reference.Name), GetStringIndex(reference.Culture), GetBlobIndex(reference.Hash)));
 
                 reference.token = new(TokenType.AssemblyRef, rid);
             }
@@ -1158,12 +1158,12 @@ namespace MonoFN.Cecil
 
         private void AddModuleReferences()
         {
-            Collection<ModuleReference> references = module.ModuleReferences;
-            ModuleRefTable table = GetTable<ModuleRefTable>(Table.ModuleRef);
+            var references = module.ModuleReferences;
+            var table = GetTable<ModuleRefTable>(Table.ModuleRef);
 
             for (int i = 0; i < references.Count; i++)
             {
-                ModuleReference reference = references[i];
+                var reference = references[i];
 
                 reference.token = new(TokenType.ModuleRef, table.AddRow(GetStringIndex(reference.Name)));
             }
@@ -1171,14 +1171,14 @@ namespace MonoFN.Cecil
 
         private void AddResources()
         {
-            Collection<Resource> resources = module.Resources;
-            ManifestResourceTable table = GetTable<ManifestResourceTable>(Table.ManifestResource);
+            var resources = module.Resources;
+            var table = GetTable<ManifestResourceTable>(Table.ManifestResource);
 
             for (int i = 0; i < resources.Count; i++)
             {
-                Resource resource = resources[i];
+                var resource = resources[i];
 
-                ManifestResourceRow row = new(0, resource.Attributes, GetStringIndex(resource.Name), 0);
+                var row = new ManifestResourceRow(0, resource.Attributes, GetStringIndex(resource.Name), 0);
 
                 switch (resource.ResourceType)
                 {
@@ -1201,8 +1201,8 @@ namespace MonoFN.Cecil
 
         private uint AddLinkedResource(LinkedResource resource)
         {
-            FileTable table = GetTable<FileTable>(Table.File);
-            byte[] hash = resource.Hash;
+            var table = GetTable<FileTable>(Table.File);
+            var hash = resource.Hash;
 
             if (hash.IsNullOrEmpty())
                 hash = CryptoService.ComputeHash(resource.File);
@@ -1217,14 +1217,14 @@ namespace MonoFN.Cecil
 
         private void AddExportedTypes()
         {
-            Collection<ExportedType> exported_types = module.ExportedTypes;
-            ExportedTypeTable table = GetTable<ExportedTypeTable>(Table.ExportedType);
+            var exported_types = module.ExportedTypes;
+            var table = GetTable<ExportedTypeTable>(Table.ExportedType);
 
             for (int i = 0; i < exported_types.Count; i++)
             {
-                ExportedType exported_type = exported_types[i];
+                var exported_type = exported_types[i];
 
-                int rid = table.AddRow(new(exported_type.Attributes, (uint)exported_type.Identifier, GetStringIndex(exported_type.Name), GetStringIndex(exported_type.Namespace), MakeCodedRID(GetExportedTypeScope(exported_type), CodedIndex.Implementation)));
+                var rid = table.AddRow(new(exported_type.Attributes, (uint)exported_type.Identifier, GetStringIndex(exported_type.Name), GetStringIndex(exported_type.Namespace), MakeCodedRID(GetExportedTypeScope(exported_type), CodedIndex.Implementation)));
 
                 exported_type.token = new(TokenType.ExportedType, rid);
             }
@@ -1235,13 +1235,13 @@ namespace MonoFN.Cecil
             if (exported_type.DeclaringType != null)
                 return exported_type.DeclaringType.MetadataToken;
 
-            IMetadataScope scope = exported_type.Scope;
+            var scope = exported_type.Scope;
             switch (scope.MetadataToken.TokenType)
             {
                 case TokenType.AssemblyRef:
                     return scope.MetadataToken;
                 case TokenType.ModuleRef:
-                    FileTable file_table = GetTable<FileTable>(Table.File);
+                    var file_table = GetTable<FileTable>(Table.File);
                     for (int i = 0; i < file_table.length; i++)
                         if (file_table.rows[i].Col2 == GetStringIndex(scope.Name))
                             return new(TokenType.File, i + 1);
@@ -1264,7 +1264,7 @@ namespace MonoFN.Cecil
 
         private void AttachTokens()
         {
-            Collection<TypeDefinition> types = module.Types;
+            var types = module.Types;
 
             for (int i = 0; i < types.Count; i++)
                 AttachTypeToken(types[i]);
@@ -1272,7 +1272,7 @@ namespace MonoFN.Cecil
 
         private void AttachTypeToken(TypeDefinition type)
         {
-            TypeDefinitionProjection treatment = WindowsRuntimeProjections.RemoveProjection(type);
+            var treatment = WindowsRuntimeProjections.RemoveProjection(type);
 
             type.token = new(TokenType.TypeDef, type_rid++);
             type.fields_range.Start = field_rid;
@@ -1292,14 +1292,14 @@ namespace MonoFN.Cecil
 
         private void AttachNestedTypesToken(TypeDefinition type)
         {
-            Collection<TypeDefinition> nested_types = type.NestedTypes;
+            var nested_types = type.NestedTypes;
             for (int i = 0; i < nested_types.Count; i++)
                 AttachTypeToken(nested_types[i]);
         }
 
         private void AttachFieldsToken(TypeDefinition type)
         {
-            Collection<FieldDefinition> fields = type.Fields;
+            var fields = type.Fields;
             type.fields_range.Length = (uint)fields.Count;
             for (int i = 0; i < fields.Count; i++)
                 fields[i].token = new(TokenType.Field, field_rid++);
@@ -1307,7 +1307,7 @@ namespace MonoFN.Cecil
 
         private void AttachMethodsToken(TypeDefinition type)
         {
-            Collection<MethodDefinition> methods = type.Methods;
+            var methods = type.Methods;
             type.methods_range.Length = (uint)methods.Count;
             for (int i = 0; i < methods.Count; i++)
                 methods[i].token = new(TokenType.Method, method_rid++);
@@ -1329,7 +1329,7 @@ namespace MonoFN.Cecil
 
         private MetadataToken GetTypeSpecToken(TypeReference type)
         {
-            uint row = GetBlobIndex(GetTypeSpecSignature(type));
+            var row = GetBlobIndex(GetTypeSpecSignature(type));
 
             MetadataToken token;
             if (type_spec_map.TryGetValue(row, out token))
@@ -1342,16 +1342,16 @@ namespace MonoFN.Cecil
         {
             type.token = new(TokenType.TypeSpec, typespec_table.AddRow(row));
 
-            MetadataToken token = type.token;
+            var token = type.token;
             type_spec_map.Add(row, token);
             return token;
         }
 
         private MetadataToken GetTypeRefToken(TypeReference type)
         {
-            TypeReferenceProjection projection = WindowsRuntimeProjections.RemoveProjection(type);
+            var projection = WindowsRuntimeProjections.RemoveProjection(type);
 
-            TypeRefRow row = CreateTypeRefRow(type);
+            var row = CreateTypeRefRow(type);
 
             MetadataToken token;
             if (!type_ref_map.TryGetValue(row, out token))
@@ -1364,7 +1364,7 @@ namespace MonoFN.Cecil
 
         private TypeRefRow CreateTypeRefRow(TypeReference type)
         {
-            MetadataToken scope_token = GetScopeToken(type);
+            var scope_token = GetScopeToken(type);
 
             return new(MakeCodedRID(scope_token, CodedIndex.ResolutionScope), GetStringIndex(type.Name), GetStringIndex(type.Namespace));
         }
@@ -1374,7 +1374,7 @@ namespace MonoFN.Cecil
             if (type.IsNested)
                 return GetTypeRefToken(type.DeclaringType);
 
-            IMetadataScope scope = type.Scope;
+            var scope = type.Scope;
 
             if (scope == null)
                 return MetadataToken.Zero;
@@ -1396,14 +1396,14 @@ namespace MonoFN.Cecil
         {
             type.token = new(TokenType.TypeRef, type_ref_table.AddRow(row));
 
-            MetadataToken token = type.token;
+            var token = type.token;
             type_ref_map.Add(row, token);
             return token;
         }
 
         private void AddTypes()
         {
-            Collection<TypeDefinition> types = module.Types;
+            var types = module.Types;
 
             for (int i = 0; i < types.Count; i++)
                 AddType(types[i]);
@@ -1411,7 +1411,7 @@ namespace MonoFN.Cecil
 
         private void AddType(TypeDefinition type)
         {
-            TypeDefinitionProjection treatment = WindowsRuntimeProjections.RemoveProjection(type);
+            var treatment = WindowsRuntimeProjections.RemoveProjection(type);
 
             type_def_table.AddRow(new(type.Attributes, GetStringIndex(type.Name), GetStringIndex(type.Namespace), MakeCodedRID(GetTypeToken(type.BaseType), CodedIndex.TypeDefOrRef), type.fields_range.Start, type.methods_range.Start));
 
@@ -1450,7 +1450,7 @@ namespace MonoFN.Cecil
 
         private void AddGenericParameters(IGenericParameterProvider owner)
         {
-            Collection<GenericParameter> parameters = owner.GenericParameters;
+            var parameters = owner.GenericParameters;
 
             for (int i = 0; i < parameters.Count; i++)
                 generic_parameters.Add(parameters[i]);
@@ -1460,12 +1460,12 @@ namespace MonoFN.Cecil
         {
             public int Compare(GenericParameter a, GenericParameter b)
             {
-                CodedRID a_owner = MakeCodedRID(a.Owner, CodedIndex.TypeOrMethodDef);
-                CodedRID b_owner = MakeCodedRID(b.Owner, CodedIndex.TypeOrMethodDef);
+                var a_owner = MakeCodedRID(a.Owner, CodedIndex.TypeOrMethodDef);
+                var b_owner = MakeCodedRID(b.Owner, CodedIndex.TypeOrMethodDef);
                 if (a_owner == b_owner)
                 {
-                    int a_pos = a.Position;
-                    int b_pos = b.Position;
+                    var a_pos = a.Position;
+                    var b_pos = b.Position;
                     return a_pos == b_pos ? 0 : a_pos > b_pos ? 1 : -1;
                 }
 
@@ -1475,18 +1475,18 @@ namespace MonoFN.Cecil
 
         private void AddGenericParameters()
         {
-            GenericParameter[] items = generic_parameters.items;
-            int size = generic_parameters.size;
+            var items = generic_parameters.items;
+            var size = generic_parameters.size;
             Array.Sort(items, 0, size, new GenericParameterComparer());
 
-            GenericParamTable generic_param_table = GetTable<GenericParamTable>(Table.GenericParam);
-            GenericParamConstraintTable generic_param_constraint_table = GetTable<GenericParamConstraintTable>(Table.GenericParamConstraint);
+            var generic_param_table = GetTable<GenericParamTable>(Table.GenericParam);
+            var generic_param_constraint_table = GetTable<GenericParamConstraintTable>(Table.GenericParamConstraint);
 
             for (int i = 0; i < size; i++)
             {
-                GenericParameter generic_parameter = items[i];
+                var generic_parameter = items[i];
 
-                int rid = generic_param_table.AddRow(new((ushort)generic_parameter.Position, generic_parameter.Attributes, MakeCodedRID(generic_parameter.Owner, CodedIndex.TypeOrMethodDef), GetStringIndex(generic_parameter.Name)));
+                var rid = generic_param_table.AddRow(new((ushort)generic_parameter.Position, generic_parameter.Attributes, MakeCodedRID(generic_parameter.Owner, CodedIndex.TypeOrMethodDef), GetStringIndex(generic_parameter.Name)));
 
                 generic_parameter.token = new(TokenType.GenericParam, rid);
 
@@ -1500,15 +1500,15 @@ namespace MonoFN.Cecil
 
         private void AddConstraints(GenericParameter generic_parameter, GenericParamConstraintTable table)
         {
-            Collection<GenericParameterConstraint> constraints = generic_parameter.Constraints;
+            var constraints = generic_parameter.Constraints;
 
-            uint gp_rid = generic_parameter.token.RID;
+            var gp_rid = generic_parameter.token.RID;
 
             for (int i = 0; i < constraints.Count; i++)
             {
-                GenericParameterConstraint constraint = constraints[i];
+                var constraint = constraints[i];
 
-                int rid = table.AddRow(new(gp_rid, MakeCodedRID(GetTypeToken(constraint.ConstraintType), CodedIndex.TypeDefOrRef)));
+                var rid = table.AddRow(new(gp_rid, MakeCodedRID(GetTypeToken(constraint.ConstraintType), CodedIndex.TypeDefOrRef)));
 
                 constraint.token = new(TokenType.GenericParamConstraint, rid);
 
@@ -1519,14 +1519,14 @@ namespace MonoFN.Cecil
 
         private void AddInterfaces(TypeDefinition type)
         {
-            Collection<InterfaceImplementation> interfaces = type.Interfaces;
-            uint type_rid = type.token.RID;
+            var interfaces = type.Interfaces;
+            var type_rid = type.token.RID;
 
             for (int i = 0; i < interfaces.Count; i++)
             {
-                InterfaceImplementation iface_impl = interfaces[i];
+                var iface_impl = interfaces[i];
 
-                int rid = iface_impl_table.AddRow(new(type_rid, MakeCodedRID(GetTypeToken(iface_impl.InterfaceType), CodedIndex.TypeDefOrRef)));
+                var rid = iface_impl_table.AddRow(new(type_rid, MakeCodedRID(GetTypeToken(iface_impl.InterfaceType), CodedIndex.TypeDefOrRef)));
 
                 iface_impl.token = new(TokenType.InterfaceImpl, rid);
 
@@ -1537,19 +1537,19 @@ namespace MonoFN.Cecil
 
         private void AddLayoutInfo(TypeDefinition type)
         {
-            ClassLayoutTable table = GetTable<ClassLayoutTable>(Table.ClassLayout);
+            var table = GetTable<ClassLayoutTable>(Table.ClassLayout);
 
             table.AddRow(new((ushort)type.PackingSize, (uint)type.ClassSize, type.token.RID));
         }
 
         private void AddNestedTypes(TypeDefinition type)
         {
-            Collection<TypeDefinition> nested_types = type.NestedTypes;
-            NestedClassTable nested_table = GetTable<NestedClassTable>(Table.NestedClass);
+            var nested_types = type.NestedTypes;
+            var nested_table = GetTable<NestedClassTable>(Table.NestedClass);
 
             for (int i = 0; i < nested_types.Count; i++)
             {
-                TypeDefinition nested = nested_types[i];
+                var nested = nested_types[i];
                 AddType(nested);
                 nested_table.AddRow(new(nested.token.RID, type.token.RID));
             }
@@ -1557,7 +1557,7 @@ namespace MonoFN.Cecil
 
         private void AddFields(TypeDefinition type)
         {
-            Collection<FieldDefinition> fields = type.Fields;
+            var fields = type.Fields;
 
             for (int i = 0; i < fields.Count; i++)
                 AddField(fields[i]);
@@ -1565,7 +1565,7 @@ namespace MonoFN.Cecil
 
         private void AddField(FieldDefinition field)
         {
-            FieldDefinitionProjection projection = WindowsRuntimeProjections.RemoveProjection(field);
+            var projection = WindowsRuntimeProjections.RemoveProjection(field);
 
             field_table.AddRow(new(field.Attributes, GetStringIndex(field.Name), GetBlobIndex(GetFieldSignature(field))));
 
@@ -1589,19 +1589,19 @@ namespace MonoFN.Cecil
 
         private void AddFieldRVA(FieldDefinition field)
         {
-            FieldRVATable table = GetTable<FieldRVATable>(Table.FieldRVA);
+            var table = GetTable<FieldRVATable>(Table.FieldRVA);
             table.AddRow(new(data.AddData(field.InitialValue), field.token.RID));
         }
 
         private void AddFieldLayout(FieldDefinition field)
         {
-            FieldLayoutTable table = GetTable<FieldLayoutTable>(Table.FieldLayout);
+            var table = GetTable<FieldLayoutTable>(Table.FieldLayout);
             table.AddRow(new((uint)field.Offset, field.token.RID));
         }
 
         private void AddMethods(TypeDefinition type)
         {
-            Collection<MethodDefinition> methods = type.Methods;
+            var methods = type.Methods;
 
             for (int i = 0; i < methods.Count; i++)
                 AddMethod(methods[i]);
@@ -1609,7 +1609,7 @@ namespace MonoFN.Cecil
 
         private void AddMethod(MethodDefinition method)
         {
-            MethodDefinitionProjection projection = WindowsRuntimeProjections.RemoveProjection(method);
+            var projection = WindowsRuntimeProjections.RemoveProjection(method);
 
             method_table.AddRow(new(method.HasBody ? code.WriteMethodBody(method) : 0, method.ImplAttributes, method.Attributes, GetStringIndex(method.Name), GetBlobIndex(GetMethodSignature(method)), param_rid));
 
@@ -1635,7 +1635,7 @@ namespace MonoFN.Cecil
 
         private void AddParameters(MethodDefinition method)
         {
-            ParameterDefinition return_parameter = method.MethodReturnType.parameter;
+            var return_parameter = method.MethodReturnType.parameter;
 
             if (return_parameter != null && RequiresParameterRow(return_parameter))
                 AddParameter(0, return_parameter, param_table);
@@ -1643,11 +1643,11 @@ namespace MonoFN.Cecil
             if (!method.HasParameters)
                 return;
 
-            Collection<ParameterDefinition> parameters = method.Parameters;
+            var parameters = method.Parameters;
 
             for (int i = 0; i < parameters.Count; i++)
             {
-                ParameterDefinition parameter = parameters[i];
+                var parameter = parameters[i];
                 if (!RequiresParameterRow(parameter))
                     continue;
 
@@ -1657,18 +1657,18 @@ namespace MonoFN.Cecil
 
         private void AddPInvokeInfo(MethodDefinition method)
         {
-            PInvokeInfo pinvoke = method.PInvokeInfo;
+            var pinvoke = method.PInvokeInfo;
             if (pinvoke == null)
                 return;
 
-            ImplMapTable table = GetTable<ImplMapTable>(Table.ImplMap);
+            var table = GetTable<ImplMapTable>(Table.ImplMap);
             table.AddRow(new(pinvoke.Attributes, MakeCodedRID(method, CodedIndex.MemberForwarded), GetStringIndex(pinvoke.EntryPoint), pinvoke.Module.MetadataToken.RID));
         }
 
         private void AddOverrides(MethodDefinition method)
         {
-            Collection<MethodReference> overrides = method.Overrides;
-            MethodImplTable table = GetTable<MethodImplTable>(Table.MethodImpl);
+            var overrides = method.Overrides;
+            var table = GetTable<MethodImplTable>(Table.MethodImpl);
 
             for (int i = 0; i < overrides.Count; i++)
             {
@@ -1699,14 +1699,14 @@ namespace MonoFN.Cecil
 
         private void AddMarshalInfo(IMarshalInfoProvider owner)
         {
-            FieldMarshalTable table = GetTable<FieldMarshalTable>(Table.FieldMarshal);
+            var table = GetTable<FieldMarshalTable>(Table.FieldMarshal);
 
             table.AddRow(new(MakeCodedRID(owner, CodedIndex.HasFieldMarshal), GetBlobIndex(GetMarshalInfoSignature(owner))));
         }
 
         private void AddProperties(TypeDefinition type)
         {
-            Collection<PropertyDefinition> properties = type.Properties;
+            var properties = type.Properties;
 
             property_map_table.AddRow(new(type.token.RID, property_rid));
 
@@ -1719,7 +1719,7 @@ namespace MonoFN.Cecil
             property_table.AddRow(new(property.Attributes, GetStringIndex(property.Name), GetBlobIndex(GetPropertySignature(property))));
             property.token = new(TokenType.Property, property_rid++);
 
-            MethodDefinition method = property.GetMethod;
+            var method = property.GetMethod;
             if (method != null)
                 AddSemantic(MethodSemanticsAttributes.Getter, property, method);
 
@@ -1745,7 +1745,7 @@ namespace MonoFN.Cecil
 
         private void AddEvents(TypeDefinition type)
         {
-            Collection<EventDefinition> events = type.Events;
+            var events = type.Events;
 
             event_map_table.AddRow(new(type.token.RID, event_rid));
 
@@ -1758,7 +1758,7 @@ namespace MonoFN.Cecil
             event_table.AddRow(new(@event.Attributes, GetStringIndex(@event.Name), MakeCodedRID(GetTypeToken(@event.EventType), CodedIndex.TypeDefOrRef)));
             @event.token = new(TokenType.Event, event_rid++);
 
-            MethodDefinition method = @event.AddMethod;
+            var method = @event.AddMethod;
             if (method != null)
                 AddSemantic(MethodSemanticsAttributes.AddOn, @event, method);
 
@@ -1780,15 +1780,15 @@ namespace MonoFN.Cecil
         private void AddSemantic(MethodSemanticsAttributes semantics, IMetadataTokenProvider provider, MethodDefinition method)
         {
             method.SemanticsAttributes = semantics;
-            MethodSemanticsTable table = GetTable<MethodSemanticsTable>(Table.MethodSemantics);
+            var table = GetTable<MethodSemanticsTable>(Table.MethodSemantics);
 
             table.AddRow(new(semantics, method.token.RID, MakeCodedRID(provider, CodedIndex.HasSemantics)));
         }
 
         private void AddConstant(IConstantProvider owner, TypeReference type)
         {
-            object constant = owner.Constant;
-            ElementType etype = GetConstantType(type, constant);
+            var constant = owner.Constant;
+            var etype = GetConstantType(type, constant);
 
             constant_table.AddRow(new(etype, MakeCodedRID(owner.MetadataToken, CodedIndex.HasConstant), GetBlobIndex(GetConstantSignature(etype, constant))));
         }
@@ -1798,11 +1798,11 @@ namespace MonoFN.Cecil
             if (constant == null)
                 return ElementType.Class;
 
-            ElementType etype = constant_type.etype;
+            var etype = constant_type.etype;
             switch (etype)
             {
                 case ElementType.None:
-                    TypeDefinition type = constant_type.CheckedResolve();
+                    var type = constant_type.CheckedResolve();
                     if (type.IsEnum)
                         return GetConstantType(type.GetEnumUnderlyingType(), constant);
 
@@ -1817,7 +1817,7 @@ namespace MonoFN.Cecil
                 case ElementType.Var:
                     return ElementType.Class;
                 case ElementType.GenericInst:
-                    GenericInstanceType generic_instance = (GenericInstanceType)constant_type;
+                    var generic_instance = (GenericInstanceType)constant_type;
                     if (generic_instance.ElementType.IsTypeOf("System", "Nullable`1"))
                         return GetConstantType(generic_instance.GenericArguments[0], constant);
 
@@ -1884,13 +1884,13 @@ namespace MonoFN.Cecil
 
         private void AddCustomAttributes(ICustomAttributeProvider owner)
         {
-            Collection<CustomAttribute> custom_attributes = owner.CustomAttributes;
+            var custom_attributes = owner.CustomAttributes;
 
             for (int i = 0; i < custom_attributes.Count; i++)
             {
-                CustomAttribute attribute = custom_attributes[i];
+                var attribute = custom_attributes[i];
 
-                CustomAttributeValueProjection projection = WindowsRuntimeProjections.RemoveProjection(attribute);
+                var projection = WindowsRuntimeProjections.RemoveProjection(attribute);
 
                 custom_attribute_table.AddRow(new(MakeCodedRID(owner, CodedIndex.HasCustomAttribute), MakeCodedRID(LookupToken(attribute.Constructor), CodedIndex.CustomAttributeType), GetBlobIndex(GetCustomAttributeSignature(attribute))));
 
@@ -1900,11 +1900,11 @@ namespace MonoFN.Cecil
 
         private void AddSecurityDeclarations(ISecurityDeclarationProvider owner)
         {
-            Collection<SecurityDeclaration> declarations = owner.SecurityDeclarations;
+            var declarations = owner.SecurityDeclarations;
 
             for (int i = 0; i < declarations.Count; i++)
             {
-                SecurityDeclaration declaration = declarations[i];
+                var declaration = declarations[i];
 
                 declsec_table.AddRow(new(declaration.Action, MakeCodedRID(owner, CodedIndex.HasDeclSecurity), GetBlobIndex(GetSecurityDeclarationSignature(declaration))));
             }
@@ -1912,7 +1912,7 @@ namespace MonoFN.Cecil
 
         private MetadataToken GetMemberRefToken(MemberReference member)
         {
-            MemberRefRow row = CreateMemberRefRow(member);
+            var row = CreateMemberRefRow(member);
 
             MetadataToken token;
             if (!member_ref_map.TryGetValue(row, out token))
@@ -1930,14 +1930,14 @@ namespace MonoFN.Cecil
         {
             member.token = new(TokenType.MemberRef, member_ref_table.AddRow(row));
 
-            MetadataToken token = member.token;
+            var token = member.token;
             member_ref_map.Add(row, token);
             return token;
         }
 
         private MetadataToken GetMethodSpecToken(MethodSpecification method_spec)
         {
-            MethodSpecRow row = CreateMethodSpecRow(method_spec);
+            var row = CreateMethodSpecRow(method_spec);
 
             MetadataToken token;
             if (method_spec_map.TryGetValue(row, out token))
@@ -1969,9 +1969,9 @@ namespace MonoFN.Cecil
             if (!method_spec.IsGenericInstance)
                 throw new NotSupportedException();
 
-            GenericInstanceMethod generic_instance = (GenericInstanceMethod)method_spec;
+            var generic_instance = (GenericInstanceMethod)method_spec;
 
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
             signature.WriteByte(0x0a);
 
             signature.WriteGenericInstanceSignature(generic_instance);
@@ -2001,7 +2001,7 @@ namespace MonoFN.Cecil
 
         private SignatureWriter GetVariablesSignature(Collection<VariableDefinition> variables)
         {
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
             signature.WriteByte(0x7);
             signature.WriteCompressedUInt32((uint)variables.Count);
             for (int i = 0; i < variables.Count; i++)
@@ -2011,7 +2011,7 @@ namespace MonoFN.Cecil
 
         private SignatureWriter GetConstantTypeSignature(TypeReference constant_type)
         {
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
             signature.WriteByte(0x6);
             signature.WriteTypeSignature(constant_type);
             return signature;
@@ -2019,7 +2019,7 @@ namespace MonoFN.Cecil
 
         private SignatureWriter GetFieldSignature(FieldReference field)
         {
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
             signature.WriteByte(0x6);
             signature.WriteTypeSignature(field.FieldType);
             return signature;
@@ -2027,18 +2027,18 @@ namespace MonoFN.Cecil
 
         private SignatureWriter GetMethodSignature(IMethodSignature method)
         {
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
             signature.WriteMethodSignature(method);
             return signature;
         }
 
         private SignatureWriter GetMemberRefSignature(MemberReference member)
         {
-            FieldReference field = member as FieldReference;
+            var field = member as FieldReference;
             if (field != null)
                 return GetFieldSignature(field);
 
-            MethodReference method = member as MethodReference;
+            var method = member as MethodReference;
             if (method != null)
                 return GetMethodSignature(method);
 
@@ -2047,7 +2047,7 @@ namespace MonoFN.Cecil
 
         private SignatureWriter GetPropertySignature(PropertyDefinition property)
         {
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
             byte calling_convention = 0x8;
             if (property.HasThis)
                 calling_convention |= 0x20;
@@ -2076,14 +2076,14 @@ namespace MonoFN.Cecil
 
         private SignatureWriter GetTypeSpecSignature(TypeReference type)
         {
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
             signature.WriteTypeSignature(type);
             return signature;
         }
 
         private SignatureWriter GetConstantSignature(ElementType type, object value)
         {
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
 
             switch (type)
             {
@@ -2109,7 +2109,7 @@ namespace MonoFN.Cecil
 
         private SignatureWriter GetCustomAttributeSignature(CustomAttribute attribute)
         {
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
             if (!attribute.resolved)
             {
                 signature.WriteBytes(attribute.GetBlob());
@@ -2127,7 +2127,7 @@ namespace MonoFN.Cecil
 
         private SignatureWriter GetSecurityDeclarationSignature(SecurityDeclaration declaration)
         {
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
 
             if (!declaration.resolved)
                 signature.WriteBytes(declaration.GetBlob());
@@ -2141,7 +2141,7 @@ namespace MonoFN.Cecil
 
         private SignatureWriter GetMarshalInfoSignature(IMarshalInfoProvider owner)
         {
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
 
             signature.WriteMarshalInfo(owner.MarshalInfo);
 
@@ -2161,11 +2161,11 @@ namespace MonoFN.Cecil
             if (metadata_builder != null)
                 return metadata_builder.LookupToken(provider);
 
-            MemberReference member = provider as MemberReference;
+            var member = provider as MemberReference;
             if (member == null || member.Module != module)
                 throw CreateForeignMemberException(member);
 
-            MetadataToken token = provider.MetadataToken;
+            var token = provider.MetadataToken;
 
             switch (token.TokenType)
             {
@@ -2209,7 +2209,7 @@ namespace MonoFN.Cecil
 
         private void AddLocalScope(MethodDebugInformation method_info, ScopeDebugInformation scope)
         {
-            int rid = local_scope_table.AddRow(new(method_info.Method.MetadataToken.RID, scope.import != null ? AddImportScope(scope.import) : 0, local_variable_rid, local_constant_rid, (uint)scope.Start.Offset, (uint)((scope.End.IsEndOfMethod ? method_info.code_size : scope.End.Offset) - scope.Start.Offset)));
+            var rid = local_scope_table.AddRow(new(method_info.Method.MetadataToken.RID, scope.import != null ? AddImportScope(scope.import) : 0, local_variable_rid, local_constant_rid, (uint)scope.Start.Offset, (uint)((scope.End.IsEndOfMethod ? method_info.code_size : scope.End.Offset) - scope.Start.Offset)));
 
             scope.token = new(TokenType.LocalScope, rid);
 
@@ -2229,7 +2229,7 @@ namespace MonoFN.Cecil
         {
             for (int i = 0; i < scope.Variables.Count; i++)
             {
-                VariableDebugInformation variable = scope.Variables[i];
+                var variable = scope.Variables[i];
                 local_variable_table.AddRow(new(variable.Attributes, (ushort)variable.Index, GetStringIndex(variable.Name)));
                 variable.token = new(TokenType.LocalVariable, local_variable_rid);
                 local_variable_rid++;
@@ -2242,7 +2242,7 @@ namespace MonoFN.Cecil
         {
             for (int i = 0; i < scope.Constants.Count; i++)
             {
-                ConstantDebugInformation constant = scope.Constants[i];
+                var constant = scope.Constants[i];
                 local_constant_table.AddRow(new(GetStringIndex(constant.Name), GetBlobIndex(GetConstantSignature(constant))));
                 constant.token = new(TokenType.LocalConstant, local_constant_rid);
                 local_constant_rid++;
@@ -2251,21 +2251,21 @@ namespace MonoFN.Cecil
 
         private SignatureWriter GetConstantSignature(ConstantDebugInformation constant)
         {
-            TypeReference type = constant.ConstantType;
+            var type = constant.ConstantType;
 
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
             signature.WriteTypeSignature(type);
 
             if (type.IsTypeOf("System", "Decimal"))
             {
-                int[] bits = decimal.GetBits((decimal)constant.Value);
+                var bits = decimal.GetBits((decimal)constant.Value);
 
-                uint low = (uint)bits[0];
-                uint mid = (uint)bits[1];
-                uint high = (uint)bits[2];
+                var low = (uint)bits[0];
+                var mid = (uint)bits[1];
+                var high = (uint)bits[2];
 
-                byte scale = (byte)(bits[3] >> 16);
-                bool negative = (bits[3] & 0x80000000) != 0;
+                var scale = (byte)(bits[3] >> 16);
+                var negative = (bits[3] & 0x80000000) != 0;
 
                 signature.WriteByte((byte)(scale | (negative ? 0x80 : 0x00)));
                 signature.WriteUInt32(low);
@@ -2277,7 +2277,7 @@ namespace MonoFN.Cecil
 
             if (type.IsTypeOf("System", "DateTime"))
             {
-                DateTime date = (DateTime)constant.Value;
+                var date = (DateTime)constant.Value;
                 signature.WriteInt64(date.Ticks);
                 return signature;
             }
@@ -2292,15 +2292,15 @@ namespace MonoFN.Cecil
             if (!provider.HasCustomDebugInformations)
                 return;
 
-            Collection<CustomDebugInformation> custom_infos = provider.CustomDebugInformations;
+            var custom_infos = provider.CustomDebugInformations;
 
             for (int i = 0; i < custom_infos.Count; i++)
             {
-                CustomDebugInformation custom_info = custom_infos[i];
+                var custom_info = custom_infos[i];
                 switch (custom_info.Kind)
                 {
                     case CustomDebugInformationKind.Binary:
-                        BinaryCustomDebugInformation binary_info = (BinaryCustomDebugInformation)custom_info;
+                        var binary_info = (BinaryCustomDebugInformation)custom_info;
                         AddCustomDebugInformation(provider, binary_info, GetBlobIndex(binary_info.Data));
                         break;
                     case CustomDebugInformationKind.AsyncMethodBody:
@@ -2323,18 +2323,18 @@ namespace MonoFN.Cecil
 
         private void AddStateMachineScopeDebugInformation(ICustomDebugInformationProvider provider, StateMachineScopeDebugInformation state_machine_scope)
         {
-            MethodDebugInformation method_info = ((MethodDefinition)provider).DebugInformation;
+            var method_info = ((MethodDefinition)provider).DebugInformation;
 
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
 
-            Collection<StateMachineScope> scopes = state_machine_scope.Scopes;
+            var scopes = state_machine_scope.Scopes;
 
             for (int i = 0; i < scopes.Count; i++)
             {
-                StateMachineScope scope = scopes[i];
+                var scope = scopes[i];
                 signature.WriteUInt32((uint)scope.Start.Offset);
 
-                int end_offset = scope.End.IsEndOfMethod ? method_info.code_size : scope.End.Offset;
+                var end_offset = scope.End.IsEndOfMethod ? method_info.code_size : scope.End.Offset;
 
                 signature.WriteUInt32((uint)(end_offset - scope.Start.Offset));
             }
@@ -2344,7 +2344,7 @@ namespace MonoFN.Cecil
 
         private void AddAsyncMethodBodyDebugInformation(ICustomDebugInformationProvider provider, AsyncMethodBodyDebugInformation async_method)
         {
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
             signature.WriteUInt32((uint)async_method.catch_handler.Offset + 1);
 
             if (!async_method.yields.IsNullOrEmpty())
@@ -2362,7 +2362,7 @@ namespace MonoFN.Cecil
 
         private void AddEmbeddedSourceDebugInformation(ICustomDebugInformationProvider provider, EmbeddedSourceDebugInformation embedded_source)
         {
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
 
             if (!embedded_source.resolved)
             {
@@ -2371,15 +2371,15 @@ namespace MonoFN.Cecil
                 return;
             }
 
-            byte[] content = embedded_source.content ?? Empty<byte>.Array;
+            var content = embedded_source.content ?? Empty<byte>.Array;
             if (embedded_source.compress)
             {
                 signature.WriteInt32(content.Length);
 
-                MemoryStream decompressed_stream = new(content);
-                MemoryStream content_stream = new();
+                var decompressed_stream = new MemoryStream(content);
+                var content_stream = new MemoryStream();
 
-                using (DeflateStream compress_stream = new(content_stream, CompressionMode.Compress, leaveOpen: true))
+                using (var compress_stream = new DeflateStream(content_stream, CompressionMode.Compress, leaveOpen: true))
                 {
                     decompressed_stream.CopyTo(compress_stream);
                 }
@@ -2397,7 +2397,7 @@ namespace MonoFN.Cecil
 
         private void AddSourceLinkDebugInformation(ICustomDebugInformationProvider provider, SourceLinkDebugInformation source_link)
         {
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
             signature.WriteBytes(Encoding.UTF8.GetBytes(source_link.content));
 
             AddCustomDebugInformation(provider, source_link, signature);
@@ -2410,7 +2410,7 @@ namespace MonoFN.Cecil
 
         private void AddCustomDebugInformation(ICustomDebugInformationProvider provider, CustomDebugInformation custom_info, uint blob_index)
         {
-            int rid = custom_debug_information_table.AddRow(new(MakeCodedRID(provider.MetadataToken, CodedIndex.HasCustomDebugInformation), GetGuidIndex(custom_info.Identifier), blob_index));
+            var rid = custom_debug_information_table.AddRow(new(MakeCodedRID(provider.MetadataToken, CodedIndex.HasCustomDebugInformation), GetGuidIndex(custom_info.Identifier), blob_index));
 
             custom_info.token = new(TokenType.CustomDebugInformation, rid);
         }
@@ -2424,7 +2424,7 @@ namespace MonoFN.Cecil
             uint targets_index = 0;
             if (import.HasTargets)
             {
-                SignatureWriter signature = CreateSignatureWriter();
+                var signature = CreateSignatureWriter();
 
                 for (int i = 0; i < import.Targets.Count; i++)
                     AddImportTarget(import.Targets[i], signature);
@@ -2432,7 +2432,7 @@ namespace MonoFN.Cecil
                 targets_index = GetBlobIndex(signature);
             }
 
-            ImportScopeRow row = new(parent, targets_index);
+            var row = new ImportScopeRow(parent, targets_index);
 
             MetadataToken import_token;
             if (import_scope_map.TryGetValue(row, out import_token))
@@ -2511,8 +2511,8 @@ namespace MonoFN.Cecil
 
         private SignatureWriter GetDocumentNameSignature(Document document)
         {
-            string name = document.Url;
-            SignatureWriter signature = CreateSignatureWriter();
+            var name = document.Url;
+            var signature = CreateSignatureWriter();
 
             char separator;
             if (!TryGetDocumentNameSeparator(name, out separator))
@@ -2523,7 +2523,7 @@ namespace MonoFN.Cecil
             }
 
             signature.WriteByte((byte)separator);
-            string[] parts = name.Split(new[] { separator });
+            var parts = name.Split(new[] { separator });
             for (int i = 0; i < parts.Length; i++)
             {
                 if (parts[i] == String.Empty)
@@ -2571,13 +2571,13 @@ namespace MonoFN.Cecil
 
         private void AddSequencePoints(MethodDebugInformation info)
         {
-            uint rid = info.Method.MetadataToken.RID;
+            var rid = info.Method.MetadataToken.RID;
 
             Document document;
             if (info.TryGetUniqueDocument(out document))
                 method_debug_information_table.rows[rid - 1].Col1 = GetDocumentToken(document).RID;
 
-            SignatureWriter signature = CreateSignatureWriter();
+            var signature = CreateSignatureWriter();
             signature.WriteSequencePoints(info);
 
             method_debug_information_table.rows[rid - 1].Col2 = GetBlobIndex(signature);
@@ -2585,9 +2585,9 @@ namespace MonoFN.Cecil
 
         public void ComputeDeterministicMvid()
         {
-            Guid guid = CryptoService.ComputeGuid(CryptoService.ComputeHash(data, resources, string_heap, user_string_heap, blob_heap, table_heap, code));
+            var guid = CryptoService.ComputeGuid(CryptoService.ComputeHash(data, resources, string_heap, user_string_heap, blob_heap, table_heap, code));
 
-            int position = guid_heap.position;
+            var position = guid_heap.position;
             guid_heap.position = 0;
             guid_heap.WriteBytes(guid.ToByteArray());
             guid_heap.position = position;
@@ -2618,7 +2618,7 @@ namespace MonoFN.Cecil
                 return;
             }
 
-            byte[] bytes = Encoding.UTF8.GetBytes(@string);
+            var bytes = Encoding.UTF8.GetBytes(@string);
             WriteCompressedUInt32((uint)bytes.Length);
             WriteBytes(bytes);
         }
@@ -2631,13 +2631,13 @@ namespace MonoFN.Cecil
             if (method.ExplicitThis)
                 calling_convention |= 0x40;
 
-            IGenericParameterProvider generic_provider = method as IGenericParameterProvider;
-            int generic_arity = generic_provider != null && generic_provider.HasGenericParameters ? generic_provider.GenericParameters.Count : 0;
+            var generic_provider = method as IGenericParameterProvider;
+            var generic_arity = generic_provider != null && generic_provider.HasGenericParameters ? generic_provider.GenericParameters.Count : 0;
 
             if (generic_arity > 0)
                 calling_convention |= 0x10;
 
-            int param_count = method.HasParameters ? method.Parameters.Count : 0;
+            var param_count = method.HasParameters ? method.Parameters.Count : 0;
 
             WriteByte(calling_convention);
 
@@ -2650,7 +2650,7 @@ namespace MonoFN.Cecil
             if (param_count == 0)
                 return;
 
-            Collection<ParameterDefinition> parameters = method.Parameters;
+            var parameters = method.Parameters;
 
             for (int i = 0; i < param_count; i++)
                 WriteTypeSignature(parameters[i].ParameterType);
@@ -2671,17 +2671,17 @@ namespace MonoFN.Cecil
             if (type == null)
                 throw new ArgumentNullException();
 
-            ElementType etype = type.etype;
+            var etype = type.etype;
 
             switch (etype)
             {
                 case ElementType.MVar:
                 case ElementType.Var:
                 {
-                    GenericParameter generic_parameter = (GenericParameter)type;
+                    var generic_parameter = (GenericParameter)type;
 
                     WriteElementType(etype);
-                    int position = generic_parameter.Position;
+                    var position = generic_parameter.Position;
                     if (position == -1)
                         throw new NotSupportedException();
 
@@ -2691,7 +2691,7 @@ namespace MonoFN.Cecil
 
                 case ElementType.GenericInst:
                 {
-                    GenericInstanceType generic_instance = (GenericInstanceType)type;
+                    var generic_instance = (GenericInstanceType)type;
                     WriteElementType(ElementType.GenericInst);
                     WriteElementType(generic_instance.IsValueType ? ElementType.ValueType : ElementType.Class);
                     WriteCompressedUInt32(MakeTypeDefOrRefCodedRID(generic_instance.ElementType));
@@ -2705,7 +2705,7 @@ namespace MonoFN.Cecil
                 case ElementType.Pinned:
                 case ElementType.Sentinel:
                 {
-                    TypeSpecification type_spec = (TypeSpecification)type;
+                    var type_spec = (TypeSpecification)type;
                     WriteElementType(etype);
                     WriteTypeSignature(type_spec.ElementType);
                     break;
@@ -2713,7 +2713,7 @@ namespace MonoFN.Cecil
 
                 case ElementType.FnPtr:
                 {
-                    FunctionPointerType fptr = (FunctionPointerType)type;
+                    var fptr = (FunctionPointerType)type;
                     WriteElementType(ElementType.FnPtr);
                     WriteMethodSignature(fptr);
                     break;
@@ -2722,14 +2722,14 @@ namespace MonoFN.Cecil
                 case ElementType.CModOpt:
                 case ElementType.CModReqD:
                 {
-                    IModifierType modifier = (IModifierType)type;
+                    var modifier = (IModifierType)type;
                     WriteModifierSignature(etype, modifier);
                     break;
                 }
 
                 case ElementType.Array:
                 {
-                    ArrayType array = (ArrayType)type;
+                    var array = (ArrayType)type;
                     if (!array.IsVector)
                     {
                         WriteArrayTypeSignature(array);
@@ -2761,17 +2761,17 @@ namespace MonoFN.Cecil
             WriteElementType(ElementType.Array);
             WriteTypeSignature(array.ElementType);
 
-            Collection<ArrayDimension> dimensions = array.Dimensions;
-            int rank = dimensions.Count;
+            var dimensions = array.Dimensions;
+            var rank = dimensions.Count;
 
             WriteCompressedUInt32((uint)rank);
 
-            int sized = 0;
-            int lbounds = 0;
+            var sized = 0;
+            var lbounds = 0;
 
             for (int i = 0; i < rank; i++)
             {
-                ArrayDimension dimension = dimensions[i];
+                var dimension = dimensions[i];
 
                 if (dimension.UpperBound.HasValue)
                 {
@@ -2784,12 +2784,12 @@ namespace MonoFN.Cecil
                 }
             }
 
-            int[] sizes = new int [sized];
-            int[] low_bounds = new int [lbounds];
+            var sizes = new int [sized];
+            var low_bounds = new int [lbounds];
 
             for (int i = 0; i < lbounds; i++)
             {
-                ArrayDimension dimension = dimensions[i];
+                var dimension = dimensions[i];
                 low_bounds[i] = dimension.LowerBound.GetValueOrDefault();
                 if (dimension.UpperBound.HasValue)
                     sizes[i] = dimension.UpperBound.Value - low_bounds[i] + 1;
@@ -2806,8 +2806,8 @@ namespace MonoFN.Cecil
 
         public void WriteGenericInstanceSignature(IGenericInstance instance)
         {
-            Collection<TypeReference> generic_arguments = instance.GenericArguments;
-            int arity = generic_arguments.Count;
+            var generic_arguments = instance.GenericArguments;
+            var arity = generic_arguments.Count;
 
             WriteCompressedUInt32((uint)arity);
             for (int i = 0; i < arity; i++)
@@ -2823,7 +2823,7 @@ namespace MonoFN.Cecil
 
         private bool TryWriteElementType(TypeReference type)
         {
-            ElementType element = type.etype;
+            var element = type.etype;
 
             if (element == ElementType.None)
                 return false;
@@ -2850,8 +2850,8 @@ namespace MonoFN.Cecil
             if (!attribute.HasConstructorArguments)
                 return;
 
-            Collection<CustomAttributeArgument> arguments = attribute.ConstructorArguments;
-            Collection<ParameterDefinition> parameters = attribute.Constructor.Parameters;
+            var arguments = attribute.ConstructorArguments;
+            var parameters = attribute.Constructor.Parameters;
 
             if (parameters.Count != arguments.Count)
                 throw new InvalidOperationException();
@@ -2873,7 +2873,7 @@ namespace MonoFN.Cecil
 
         private void WriteCustomAttributeFixedArrayArgument(ArrayType type, CustomAttributeArgument argument)
         {
-            CustomAttributeArgument[] values = argument.Value as CustomAttributeArgument[];
+            var values = argument.Value as CustomAttributeArgument[];
 
             if (values == null)
             {
@@ -2886,7 +2886,7 @@ namespace MonoFN.Cecil
             if (values.Length == 0)
                 return;
 
-            TypeReference element_type = type.ElementType;
+            var element_type = type.ElementType;
 
             for (int i = 0; i < values.Length; i++)
                 WriteCustomAttributeElement(element_type, values[i]);
@@ -2915,12 +2915,12 @@ namespace MonoFN.Cecil
 
         private void WriteCustomAttributeValue(TypeReference type, object value)
         {
-            ElementType etype = type.etype;
+            var etype = type.etype;
 
             switch (etype)
             {
                 case ElementType.String:
-                    string @string = (string)value;
+                    var @string = (string)value;
                     if (@string == null)
                         WriteByte(0xff);
                     else
@@ -2940,7 +2940,7 @@ namespace MonoFN.Cecil
 
         private void WriteCustomAttributeTypeValue(TypeReference value)
         {
-            TypeDefinition typeDefinition = value as TypeDefinition;
+            var typeDefinition = value as TypeDefinition;
 
             if (typeDefinition != null)
             {
@@ -3011,7 +3011,7 @@ namespace MonoFN.Cecil
 
         private void WriteCustomAttributeEnumValue(TypeReference enum_type, object value)
         {
-            TypeDefinition type = enum_type.CheckedResolve();
+            var type = enum_type.CheckedResolve();
             if (!type.IsEnum)
                 throw new ArgumentException();
 
@@ -3022,13 +3022,13 @@ namespace MonoFN.Cecil
         {
             if (type.IsArray)
             {
-                ArrayType array = (ArrayType)type;
+                var array = (ArrayType)type;
                 WriteElementType(ElementType.SzArray);
                 WriteCustomAttributeFieldOrPropType(array.ElementType);
                 return;
             }
 
-            ElementType etype = type.etype;
+            var etype = type.etype;
 
             switch (etype)
             {
@@ -3054,7 +3054,7 @@ namespace MonoFN.Cecil
 
         public void WriteCustomAttributeNamedArguments(CustomAttribute attribute)
         {
-            int count = GetNamedArgumentCount(attribute);
+            var count = GetNamedArgumentCount(attribute);
 
             WriteUInt16((ushort)count);
 
@@ -3094,7 +3094,7 @@ namespace MonoFN.Cecil
 
         private void WriteCustomAttributeNamedArgument(byte kind, CustomAttributeNamedArgument named_argument)
         {
-            CustomAttributeArgument argument = named_argument.Argument;
+            var argument = named_argument.Argument;
 
             WriteByte(kind);
             WriteCustomAttributeFieldOrPropType(argument.Type);
@@ -3106,7 +3106,7 @@ namespace MonoFN.Cecil
         {
             WriteTypeReference(attribute.AttributeType);
 
-            int count = GetNamedArgumentCount(attribute);
+            var count = GetNamedArgumentCount(attribute);
 
             if (count == 0)
             {
@@ -3115,7 +3115,7 @@ namespace MonoFN.Cecil
                 return;
             }
 
-            SignatureWriter buffer = new(metadata);
+            var buffer = new SignatureWriter(metadata);
             buffer.WriteCompressedUInt32((uint)count);
             buffer.WriteICustomAttributeNamedArguments(attribute);
 
@@ -3127,7 +3127,7 @@ namespace MonoFN.Cecil
         {
             WriteByte((byte)'.');
 
-            Collection<SecurityAttribute> attributes = declaration.security_attributes;
+            var attributes = declaration.security_attributes;
             if (attributes == null)
                 throw new NotSupportedException();
 
@@ -3139,7 +3139,7 @@ namespace MonoFN.Cecil
 
         public void WriteXmlSecurityDeclaration(SecurityDeclaration declaration)
         {
-            string xml = GetXmlSecurityDeclaration(declaration);
+            var xml = GetXmlSecurityDeclaration(declaration);
             if (xml == null)
                 throw new NotSupportedException();
 
@@ -3151,7 +3151,7 @@ namespace MonoFN.Cecil
             if (declaration.security_attributes == null || declaration.security_attributes.Count != 1)
                 return null;
 
-            SecurityAttribute attribute = declaration.security_attributes[0];
+            var attribute = declaration.security_attributes[0];
 
             if (!attribute.AttributeType.IsTypeOf("System.Security.Permissions", "PermissionSetAttribute"))
                 return null;
@@ -3159,7 +3159,7 @@ namespace MonoFN.Cecil
             if (attribute.properties == null || attribute.properties.Count != 1)
                 return null;
 
-            CustomAttributeNamedArgument property = attribute.properties[0];
+            var property = attribute.properties[0];
             if (property.Name != "XML")
                 return null;
 
@@ -3179,7 +3179,7 @@ namespace MonoFN.Cecil
             {
                 case NativeType.Array:
                 {
-                    ArrayMarshalInfo array = (ArrayMarshalInfo)marshal_info;
+                    var array = (ArrayMarshalInfo)marshal_info;
                     if (array.element_type != NativeType.None)
                         WriteNativeType(array.element_type);
                     if (array.size_parameter_index > -1)
@@ -3192,14 +3192,14 @@ namespace MonoFN.Cecil
                 }
                 case NativeType.SafeArray:
                 {
-                    SafeArrayMarshalInfo array = (SafeArrayMarshalInfo)marshal_info;
+                    var array = (SafeArrayMarshalInfo)marshal_info;
                     if (array.element_type != VariantType.None)
                         WriteVariantType(array.element_type);
                     return;
                 }
                 case NativeType.FixedArray:
                 {
-                    FixedArrayMarshalInfo array = (FixedArrayMarshalInfo)marshal_info;
+                    var array = (FixedArrayMarshalInfo)marshal_info;
                     if (array.size > -1)
                         WriteCompressedUInt32((uint)array.size);
                     if (array.element_type != NativeType.None)
@@ -3207,12 +3207,12 @@ namespace MonoFN.Cecil
                     return;
                 }
                 case NativeType.FixedSysString:
-                    FixedSysStringMarshalInfo sys_string = (FixedSysStringMarshalInfo)marshal_info;
+                    var sys_string = (FixedSysStringMarshalInfo)marshal_info;
                     if (sys_string.size > -1)
                         WriteCompressedUInt32((uint)sys_string.size);
                     return;
                 case NativeType.CustomMarshaler:
-                    CustomMarshalInfo marshaler = (CustomMarshalInfo)marshal_info;
+                    var marshaler = (CustomMarshalInfo)marshal_info;
                     WriteUTF8String(marshaler.guid != Guid.Empty ? marshaler.guid.ToString() : string.Empty);
                     WriteUTF8String(marshaler.unmanaged_type);
                     WriteTypeReference(marshaler.managed_type);
@@ -3233,8 +3233,8 @@ namespace MonoFN.Cecil
 
         public void WriteSequencePoints(MethodDebugInformation info)
         {
-            int start_line = -1;
-            int start_column = -1;
+            var start_line = -1;
+            var start_column = -1;
 
             WriteCompressedUInt32(info.local_var_token.RID);
 
@@ -3244,12 +3244,12 @@ namespace MonoFN.Cecil
 
             for (int i = 0; i < info.SequencePoints.Count; i++)
             {
-                SequencePoint sequence_point = info.SequencePoints[i];
+                var sequence_point = info.SequencePoints[i];
 
-                Document document = sequence_point.Document;
+                var document = sequence_point.Document;
                 if (previous_document != document)
                 {
-                    MetadataToken document_token = metadata.GetDocumentToken(document);
+                    var document_token = metadata.GetDocumentToken(document);
 
                     if (previous_document != null)
                         WriteCompressedUInt32(0);
@@ -3269,8 +3269,8 @@ namespace MonoFN.Cecil
                     continue;
                 }
 
-                int delta_lines = sequence_point.EndLine - sequence_point.StartLine;
-                int delta_columns = sequence_point.EndColumn - sequence_point.StartColumn;
+                var delta_lines = sequence_point.EndLine - sequence_point.StartLine;
+                var delta_columns = sequence_point.EndColumn - sequence_point.StartColumn;
 
                 WriteCompressedUInt32((uint)delta_lines);
 
@@ -3304,7 +3304,7 @@ namespace MonoFN.Cecil
 
             for (int i = 1; i < info.SequencePoints.Count; i++)
             {
-                SequencePoint sequence_point = info.SequencePoints[i];
+                var sequence_point = info.SequencePoints[i];
                 if (sequence_point.Document != document)
                     return false;
             }

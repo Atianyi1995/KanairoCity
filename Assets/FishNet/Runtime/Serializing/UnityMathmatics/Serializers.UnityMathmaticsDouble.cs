@@ -95,7 +95,7 @@ namespace FishNet.Serializing
     {
         public double2 Readdouble2()
         {
-            return new()
+            return new double2
             {
                 x = ReadDouble(),
                 y = ReadDouble()
@@ -104,7 +104,7 @@ namespace FishNet.Serializing
 
         public double3 Readdouble3()
         {
-            return new()
+            return new double3()
             {
                 x = ReadDouble(),
                 y = ReadDouble(),
@@ -114,7 +114,7 @@ namespace FishNet.Serializing
 
         public double4 Readdouble4()
         {
-            return new()
+            return new double4()
             {
                 x = ReadDouble(),
                 y = ReadDouble(),
@@ -125,7 +125,7 @@ namespace FishNet.Serializing
 
         public double2x2 Readdouble2x2()
         {
-            return new()
+            return new double2x2()
             {
                 c0 = Readdouble2(),
                 c1 = Readdouble2()
@@ -134,7 +134,7 @@ namespace FishNet.Serializing
 
         public double2x3 Readdouble2x3()
         {
-            return new()
+            return new double2x3()
             {
                 c0 = Readdouble2(),
                 c1 = Readdouble2(),
@@ -144,7 +144,7 @@ namespace FishNet.Serializing
 
         public double2x4 Readdouble2x4()
         {
-            return new()
+            return new double2x4()
             {
                 c0 = Readdouble2(),
                 c1 = Readdouble2(),
@@ -155,7 +155,7 @@ namespace FishNet.Serializing
 
         public double3x2 Readdouble3x2()
         {
-            return new()
+            return new double3x2()
             {
                 c0 = Readdouble3(),
                 c1 = Readdouble3()
@@ -164,7 +164,7 @@ namespace FishNet.Serializing
 
         public double4x2 Readdouble4x2()
         {
-            return new()
+            return new double4x2()
             {
                 c0 = Readdouble4(),
                 c1 = Readdouble4()
@@ -173,7 +173,7 @@ namespace FishNet.Serializing
 
         public double3x4 Readdouble3x4()
         {
-            return new()
+            return new double3x4()
             {
                 c0 = Readdouble3(),
                 c1 = Readdouble3(),
@@ -184,7 +184,7 @@ namespace FishNet.Serializing
 
         public double4x3 Readdouble4x3()
         {
-            return new()
+            return new double4x3()
             {
                 c0 = Readdouble4(),
                 c1 = Readdouble4(),
@@ -194,7 +194,7 @@ namespace FishNet.Serializing
 
         public double3x3 Readdouble3x3()
         {
-            return new()
+            return new double3x3()
             {
                 c0 = Readdouble3(),
                 c1 = Readdouble3(),
@@ -204,7 +204,7 @@ namespace FishNet.Serializing
 
         public double4x4 Readdouble4x4()
         {
-            return new()
+            return new double4x4()
             {
                 c0 = Readdouble4(),
                 c1 = Readdouble4(),

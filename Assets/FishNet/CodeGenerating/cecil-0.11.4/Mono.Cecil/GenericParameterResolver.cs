@@ -10,8 +10,8 @@ namespace MonoFN.Cecil
             if (methodReference.DeclaringType.IsArray && methodReference.Name == "Get")
                 return methodReference.ReturnType;
 
-            GenericInstanceMethod genericInstanceMethod = methodReference as GenericInstanceMethod;
-            GenericInstanceType declaringGenericInstanceType = methodReference.DeclaringType as GenericInstanceType;
+            var genericInstanceMethod = methodReference as GenericInstanceMethod;
+            var declaringGenericInstanceType = methodReference.DeclaringType as GenericInstanceType;
 
             if (genericInstanceMethod == null && declaringGenericInstanceType == null)
                 return methodReference.ReturnType;
@@ -26,8 +26,8 @@ namespace MonoFN.Cecil
 
         internal static TypeReference ResolveParameterTypeIfNeeded(MethodReference method, ParameterReference parameter)
         {
-            GenericInstanceMethod genericInstanceMethod = method as GenericInstanceMethod;
-            GenericInstanceType declaringGenericInstanceType = method.DeclaringType as GenericInstanceType;
+            var genericInstanceMethod = method as GenericInstanceMethod;
+            var declaringGenericInstanceType = method.DeclaringType as GenericInstanceType;
 
             if (genericInstanceMethod == null && declaringGenericInstanceType == null)
                 return parameter.ParameterType;
@@ -37,8 +37,8 @@ namespace MonoFN.Cecil
 
         internal static TypeReference ResolveVariableTypeIfNeeded(MethodReference method, VariableReference variable)
         {
-            GenericInstanceMethod genericInstanceMethod = method as GenericInstanceMethod;
-            GenericInstanceType declaringGenericInstanceType = method.DeclaringType as GenericInstanceType;
+            var genericInstanceMethod = method as GenericInstanceMethod;
+            var declaringGenericInstanceType = method.DeclaringType as GenericInstanceType;
 
             if (genericInstanceMethod == null && declaringGenericInstanceType == null)
                 return variable.VariableType;
@@ -48,23 +48,23 @@ namespace MonoFN.Cecil
 
         private static TypeReference ResolveIfNeeded(IGenericInstance genericInstanceMethod, IGenericInstance declaringGenericInstanceType, TypeReference parameterType)
         {
-            ByReferenceType byRefType = parameterType as ByReferenceType;
+            var byRefType = parameterType as ByReferenceType;
             if (byRefType != null)
                 return ResolveIfNeeded(genericInstanceMethod, declaringGenericInstanceType, byRefType);
 
-            ArrayType arrayType = parameterType as ArrayType;
+            var arrayType = parameterType as ArrayType;
             if (arrayType != null)
                 return ResolveIfNeeded(genericInstanceMethod, declaringGenericInstanceType, arrayType);
 
-            GenericInstanceType genericInstanceType = parameterType as GenericInstanceType;
+            var genericInstanceType = parameterType as GenericInstanceType;
             if (genericInstanceType != null)
                 return ResolveIfNeeded(genericInstanceMethod, declaringGenericInstanceType, genericInstanceType);
 
-            GenericParameter genericParameter = parameterType as GenericParameter;
+            var genericParameter = parameterType as GenericParameter;
             if (genericParameter != null)
                 return ResolveIfNeeded(genericInstanceMethod, declaringGenericInstanceType, genericParameter);
 
-            RequiredModifierType requiredModifierType = parameterType as RequiredModifierType;
+            var requiredModifierType = parameterType as RequiredModifierType;
             if (requiredModifierType != null && ContainsGenericParameters(requiredModifierType))
                 return ResolveIfNeeded(genericInstanceMethod, declaringGenericInstanceType, requiredModifierType.ElementType);
 
@@ -94,9 +94,9 @@ namespace MonoFN.Cecil
             if (!ContainsGenericParameters(genericInstanceType1))
                 return genericInstanceType1;
 
-            GenericInstanceType newGenericInstance = new(genericInstanceType1.ElementType);
+            var newGenericInstance = new GenericInstanceType(genericInstanceType1.ElementType);
 
-            foreach (TypeReference genericArgument in genericInstanceType1.GenericArguments)
+            foreach (var genericArgument in genericInstanceType1.GenericArguments)
             {
                 if (!genericArgument.IsGenericParameter)
                 {
@@ -104,7 +104,7 @@ namespace MonoFN.Cecil
                     continue;
                 }
 
-                GenericParameter genParam = (GenericParameter)genericArgument;
+                var genParam = (GenericParameter)genericArgument;
 
                 switch (genParam.Type)
                 {
@@ -133,38 +133,38 @@ namespace MonoFN.Cecil
 
         private static bool ContainsGenericParameters(TypeReference typeReference)
         {
-            GenericParameter genericParameter = typeReference as GenericParameter;
+            var genericParameter = typeReference as GenericParameter;
             if (genericParameter != null)
                 return true;
 
-            ArrayType arrayType = typeReference as ArrayType;
+            var arrayType = typeReference as ArrayType;
             if (arrayType != null)
                 return ContainsGenericParameters(arrayType.ElementType);
 
-            PointerType pointerType = typeReference as PointerType;
+            var pointerType = typeReference as PointerType;
             if (pointerType != null)
                 return ContainsGenericParameters(pointerType.ElementType);
 
-            ByReferenceType byRefType = typeReference as ByReferenceType;
+            var byRefType = typeReference as ByReferenceType;
             if (byRefType != null)
                 return ContainsGenericParameters(byRefType.ElementType);
 
-            SentinelType sentinelType = typeReference as SentinelType;
+            var sentinelType = typeReference as SentinelType;
             if (sentinelType != null)
                 return ContainsGenericParameters(sentinelType.ElementType);
 
-            PinnedType pinnedType = typeReference as PinnedType;
+            var pinnedType = typeReference as PinnedType;
             if (pinnedType != null)
                 return ContainsGenericParameters(pinnedType.ElementType);
 
-            RequiredModifierType requiredModifierType = typeReference as RequiredModifierType;
+            var requiredModifierType = typeReference as RequiredModifierType;
             if (requiredModifierType != null)
                 return ContainsGenericParameters(requiredModifierType.ElementType);
 
-            GenericInstanceType genericInstance = typeReference as GenericInstanceType;
+            var genericInstance = typeReference as GenericInstanceType;
             if (genericInstance != null)
             {
-                foreach (TypeReference genericArgument in genericInstance.GenericArguments)
+                foreach (var genericArgument in genericInstance.GenericArguments)
                 {
                     if (ContainsGenericParameters(genericArgument))
                         return true;

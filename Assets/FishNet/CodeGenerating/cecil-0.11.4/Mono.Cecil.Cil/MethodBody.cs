@@ -105,11 +105,11 @@ namespace MonoFN.Cecil.Cil
 
         private static ParameterDefinition CreateThisParameter(MethodDefinition method)
         {
-            TypeReference parameter_type = method.DeclaringType as TypeReference;
+            var parameter_type = method.DeclaringType as TypeReference;
 
             if (parameter_type.HasGenericParameters)
             {
-                GenericInstanceType instance = new(parameter_type, parameter_type.GenericParameters.Count);
+                var instance = new GenericInstanceType(parameter_type, parameter_type.GenericParameters.Count);
                 for (int i = 0; i < parameter_type.GenericParameters.Count; i++)
                     instance.GenericArguments.Add(parameter_type.GenericParameters[i]);
 
@@ -174,20 +174,20 @@ namespace MonoFN.Cecil.Cil
             for (int i = startIndex; i < size; i++)
                 items[i].index = i + offset;
 
-            MethodDebugInformation debug_info = method == null ? null : method.debug_info;
+            var debug_info = method == null ? null : method.debug_info;
             if (debug_info == null || debug_info.Scope == null)
                 return;
 
-            foreach (ScopeDebugInformation scope in debug_info.GetScopes())
+            foreach (var scope in debug_info.GetScopes())
             {
                 if (!scope.HasVariables)
                     continue;
 
-                Collection<VariableDebugInformation> variables = scope.Variables;
+                var variables = scope.Variables;
                 int variableDebugInfoIndexToRemove = -1;
                 for (int i = 0; i < variables.Count; i++)
                 {
-                    VariableDebugInformation variable = variables[i];
+                    var variable = variables[i];
 
                     // If a variable is being removed detect if it has debug info counterpart, if so remove that as well.
                     // Note that the debug info can be either resolved (has direct reference to the VariableDefinition)
@@ -230,7 +230,7 @@ namespace MonoFN.Cecil.Cil
             if (index == 0)
                 return;
 
-            Instruction previous = items[index - 1];
+            var previous = items[index - 1];
             previous.next = item;
             item.previous = previous;
         }
@@ -240,10 +240,10 @@ namespace MonoFN.Cecil.Cil
             int startOffset = 0;
             if (size != 0)
             {
-                Instruction current = items[index];
+                var current = items[index];
                 if (current == null)
                 {
-                    Instruction last = items[index - 1];
+                    var last = items[index - 1];
                     last.next = item;
                     item.previous = last;
                     return;
@@ -251,7 +251,7 @@ namespace MonoFN.Cecil.Cil
 
                 startOffset = current.Offset;
 
-                Instruction previous = current.previous;
+                var previous = current.previous;
                 if (previous != null)
                 {
                     previous.next = item;
@@ -267,7 +267,7 @@ namespace MonoFN.Cecil.Cil
 
         protected override void OnSet(Instruction item, int index)
         {
-            Instruction current = items[index];
+            var current = items[index];
 
             item.previous = current.previous;
             item.next = current.next;
@@ -280,11 +280,11 @@ namespace MonoFN.Cecil.Cil
 
         protected override void OnRemove(Instruction item, int index)
         {
-            Instruction previous = item.previous;
+            var previous = item.previous;
             if (previous != null)
                 previous.next = item.next;
 
-            Instruction next = item.next;
+            var next = item.next;
             if (next != null)
                 next.previous = item.previous;
 
@@ -297,11 +297,11 @@ namespace MonoFN.Cecil.Cil
 
         private void RemoveSequencePoint(Instruction instruction)
         {
-            MethodDebugInformation debug_info = method.debug_info;
+            var debug_info = method.debug_info;
             if (debug_info == null || !debug_info.HasSequencePoints)
                 return;
 
-            Collection<SequencePoint> sequence_points = debug_info.sequence_points;
+            var sequence_points = debug_info.sequence_points;
             for (int i = 0; i < sequence_points.Count; i++)
             {
                 if (sequence_points[i].Offset == instruction.offset)
@@ -314,7 +314,7 @@ namespace MonoFN.Cecil.Cil
 
         private void UpdateLocalScopes(Instruction removedInstruction, Instruction existingInstruction)
         {
-            MethodDebugInformation debug_info = method.debug_info;
+            var debug_info = method.debug_info;
             if (debug_info == null)
                 return;
 
@@ -360,7 +360,7 @@ namespace MonoFN.Cecil.Cil
 
             if (scope.HasScopes)
             {
-                foreach (ScopeDebugInformation subScope in scope.Scopes)
+                foreach (var subScope in scope.Scopes)
                     UpdateLocalScope(subScope, removedInstruction, existingInstruction, ref cache);
             }
 
@@ -416,7 +416,7 @@ namespace MonoFN.Cecil.Cil
                     cache.Index = i;
                     cache.Offset = size;
 
-                    Instruction item = items[i];
+                    var item = items[i];
 
                     // Allow for trailing null values in the case of
                     // instructions.Size < instructions.Capacity

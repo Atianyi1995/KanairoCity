@@ -34,7 +34,7 @@ namespace MonoFN.Cecil.Rocks
         {
             yield return element;
 
-            foreach (TSource item in source)
+            foreach (var item in source)
                 yield return item;
         }
     }

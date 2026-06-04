@@ -49,7 +49,7 @@ namespace FishNet.CodeGenerating.Helping.Extension
 
             if (expression.Body is MemberExpression memberExpression)
             {
-                PropertyInfo property = memberExpression.Member as PropertyInfo;
+                var property = memberExpression.Member as PropertyInfo;
                 return module.ImportReference(property.GetMethod);
             }
 

@@ -34,10 +34,6 @@ namespace FishNet.Component.Prediction
             /// </summary>
             public bool IsKinematic;
             /// <summary>
-            /// True if the rigidbody was detecting collisions prior to being paused.
-            /// </summary>
-            public bool DetectCollisions;
-            /// <summary>
             /// Detection mode of the Rigidbody.
             /// </summary>
             public CollisionDetectionMode CollisionDetectionMode;
@@ -48,20 +44,14 @@ namespace FishNet.Component.Prediction
                 Velocity = Vector3.zero;
                 AngularVelocity = Vector3.zero;
                 IsKinematic = rb.isKinematic;
-                DetectCollisions = rb.detectCollisions;
                 CollisionDetectionMode = rb.collisionDetectionMode;
             }
 
             public void Update(Rigidbody rb)
             {
-                #if UNITY_6000_1_OR_NEWER
                 Velocity = rb.linearVelocity;
-                #else
-                Velocity = rb.velocity;
-                #endif
                 AngularVelocity = rb.angularVelocity;
                 IsKinematic = rb.isKinematic;
-                DetectCollisions = rb.detectCollisions;
                 CollisionDetectionMode = rb.collisionDetectionMode;
             }
         }
@@ -102,29 +92,16 @@ namespace FishNet.Component.Prediction
                 Velocity = Vector2.zero;
                 AngularVelocity = 0f;
                 Simulated = rb.simulated;
-                #if UNITY_6000_1_OR_NEWER
-                IsKinematic = rb.bodyType == RigidbodyType2D.Kinematic;
-                #else
                 IsKinematic = rb.isKinematic;
-                #endif
                 CollisionDetectionMode = rb.collisionDetectionMode;
             }
 
             public void Update(Rigidbody2D rb)
             {
-                #if UNITY_6000_1_OR_NEWER
                 Velocity = rb.linearVelocity;
-                #else
-                Velocity = rb.velocity;
-                #endif
-
                 AngularVelocity = rb.angularVelocity;
                 Simulated = rb.simulated;
-                #if UNITY_6000_1_OR_NEWER
-                IsKinematic = rb.bodyType == RigidbodyType2D.Kinematic;
-                #else
                 IsKinematic = rb.isKinematic;
-                #endif
                 CollisionDetectionMode = rb.collisionDetectionMode;
             }
         }
@@ -324,7 +301,7 @@ namespace FishNet.Component.Prediction
                     _rigidbodyDatas[index] = rbData;
                     rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
                     rb.isKinematic = true;
-                    rb.detectCollisions = false;
+                    // rb.detectCollisions = false;
 
                     return true;
                 }
@@ -352,13 +329,7 @@ namespace FishNet.Component.Prediction
                     rbData.Update(rb);
                     _rigidbody2dDatas[index] = rbData;
                     rb.collisionDetectionMode = CollisionDetectionMode2D.Discrete;
-
-                    #if UNITY_6000_1_OR_NEWER
-                    rb.bodyType = RigidbodyType2D.Kinematic;
-                    #else
                     rb.isKinematic = true;
-                    #endif
-
                     rb.simulated = false;
 
                     return true;
@@ -399,20 +370,16 @@ namespace FishNet.Component.Prediction
                      * do not unpause. This means either something else
                      * is handling the kinematic state of the dev
                      * made it kinematic. */
-                    //                    if (rbData.IsKinematic)
-                    //                        return true;
+                    if (rbData.IsKinematic)
+                        return true;
 
                     // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                     rb.isKinematic = rbData.IsKinematic;
-                    rb.detectCollisions = rbData.DetectCollisions;
+                    // rb.detectCollisions = rbData.DetectCollisions;
                     rb.collisionDetectionMode = rbData.CollisionDetectionMode;
                     if (!rb.isKinematic)
                     {
-                        #if UNITY_6000_1_OR_NEWER
                         rb.linearVelocity = rbData.Velocity;
-                        #else
-                        rb.velocity = rbData.Velocity;
-                        #endif
                         rb.angularVelocity = rbData.AngularVelocity;
                     }
                     return true;
@@ -442,22 +409,16 @@ namespace FishNet.Component.Prediction
                     if (rbData.IsKinematic || !rbData.Simulated)
                         return true;
 
-                    #if UNITY_6000_1_OR_NEWER
-                    rb.bodyType = RigidbodyType2D.Dynamic;
-                    #else
-                    rb.isKinematic = false;
-                    #endif
-
-                    rb.simulated = true;
+                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                    rb.isKinematic = rbData.IsKinematic;
+                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
+                    rb.simulated = rbData.Simulated;
                     rb.collisionDetectionMode = rbData.CollisionDetectionMode;
-
-                    #if UNITY_6000_1_OR_NEWER
-                    rb.linearVelocity = rbData.Velocity;
-                    #else
-                        rb.velocity = rbData.Velocity;
-                    #endif
-                    rb.angularVelocity = rbData.AngularVelocity;
-
+                    if (!rb.isKinematic)
+                    {
+                        rb.linearVelocity = rbData.Velocity;
+                        rb.angularVelocity = rbData.AngularVelocity;
+                    }
                     return true;
                 }
             }

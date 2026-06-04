@@ -203,7 +203,7 @@ namespace MonoFN.Cecil.Cil
             if (instruction == null)
                 throw new ArgumentNullException("instruction");
 
-            int index = instructions.IndexOf(target);
+            var index = instructions.IndexOf(target);
             if (index == -1)
                 throw new ArgumentOutOfRangeException("target");
 
@@ -217,7 +217,7 @@ namespace MonoFN.Cecil.Cil
             if (instruction == null)
                 throw new ArgumentNullException("instruction");
 
-            int index = instructions.IndexOf(target);
+            var index = instructions.IndexOf(target);
             if (index == -1)
                 throw new ArgumentOutOfRangeException("target");
 

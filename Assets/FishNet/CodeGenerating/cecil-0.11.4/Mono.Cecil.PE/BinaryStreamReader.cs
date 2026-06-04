@@ -38,7 +38,7 @@ namespace MonoFN.Cecil.PE
         public void Align(int align)
         {
             align--;
-            int position = Position;
+            var position = Position;
             Advance(((position + align) & ~align) - position);
         }
 

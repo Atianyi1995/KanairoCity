@@ -51,7 +51,7 @@ namespace MonoFN.Cecil.PE
 
         public byte[] ReadBytes(int length)
         {
-            byte[] bytes = new byte [length];
+            var bytes = new byte [length];
             Buffer.BlockCopy(buffer, position, bytes, 0, length);
             position += length;
             return bytes;
@@ -108,9 +108,9 @@ namespace MonoFN.Cecil.PE
 
         public int ReadCompressedInt32()
         {
-            byte b = buffer[position];
-            int u = (int)ReadCompressedUInt32();
-            int v = u >> 1;
+            var b = buffer[position];
+            var u = (int)ReadCompressedUInt32();
+            var v = u >> 1;
             if ((u & 1) == 0)
                 return v;
 
@@ -130,7 +130,7 @@ namespace MonoFN.Cecil.PE
         {
             if (!BitConverter.IsLittleEndian)
             {
-                byte[] bytes = ReadBytes(4);
+                var bytes = ReadBytes(4);
                 Array.Reverse(bytes);
                 return BitConverter.ToSingle(bytes, 0);
             }
@@ -144,7 +144,7 @@ namespace MonoFN.Cecil.PE
         {
             if (!BitConverter.IsLittleEndian)
             {
-                byte[] bytes = ReadBytes(8);
+                var bytes = ReadBytes(8);
                 Array.Reverse(bytes);
                 return BitConverter.ToDouble(bytes, 0);
             }
@@ -269,7 +269,7 @@ namespace MonoFN.Cecil.PE
 
         public void WriteBytes(byte[] bytes)
         {
-            int length = bytes.Length;
+            var length = bytes.Length;
             if (position + length > buffer.Length)
                 Grow(length);
 
@@ -305,7 +305,7 @@ namespace MonoFN.Cecil.PE
 
         public void WriteSingle(float value)
         {
-            byte[] bytes = BitConverter.GetBytes(value);
+            var bytes = BitConverter.GetBytes(value);
 
             if (!BitConverter.IsLittleEndian)
                 Array.Reverse(bytes);
@@ -315,7 +315,7 @@ namespace MonoFN.Cecil.PE
 
         public void WriteDouble(double value)
         {
-            byte[] bytes = BitConverter.GetBytes(value);
+            var bytes = BitConverter.GetBytes(value);
 
             if (!BitConverter.IsLittleEndian)
                 Array.Reverse(bytes);
@@ -325,10 +325,10 @@ namespace MonoFN.Cecil.PE
 
         private void Grow(int desired)
         {
-            byte[] current = this.buffer;
-            int current_length = current.Length;
+            var current = this.buffer;
+            var current_length = current.Length;
 
-            byte[] buffer = new byte [Math.Max(current_length + desired, current_length * 2)];
+            var buffer = new byte [Math.Max(current_length + desired, current_length * 2)];
             Buffer.BlockCopy(current, 0, buffer, 0, current_length);
             this.buffer = buffer;
         }

@@ -57,7 +57,7 @@ namespace MonoFN.Cecil
                 if (dimensions != null)
                     return dimensions;
 
-                Collection<ArrayDimension> empty_dimensions = new();
+                var empty_dimensions = new Collection<ArrayDimension>();
                 empty_dimensions.Add(new());
 
                 Interlocked.CompareExchange(ref dimensions, empty_dimensions, null);
@@ -79,7 +79,7 @@ namespace MonoFN.Cecil
                 if (dimensions.Count > 1)
                     return false;
 
-                ArrayDimension dimension = dimensions[0];
+                var dimension = dimensions[0];
 
                 return !dimension.IsSized;
             }
@@ -104,7 +104,7 @@ namespace MonoFN.Cecil
                 if (IsVector)
                     return "[]";
 
-                StringBuilder suffix = new();
+                var suffix = new StringBuilder();
                 suffix.Append("[");
                 for (int i = 0; i < dimensions.Count; i++)
                 {

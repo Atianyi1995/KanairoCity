@@ -1,4 +1,4 @@
-using FishNet.Managing;
+﻿using FishNet.Managing;
 using FishNet.Transporting;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -99,24 +99,21 @@ namespace FishNet.Example
                     return "Invalid";
             }
 
-            Vector2 defaultResolution = new(1920f, 1080f);
-            Vector2 buttonSize = new(400f, 100f);
-            float xPos = (defaultResolution.x - buttonSize.x) / 2f;
-            float yPos = (defaultResolution.y - (buttonSize.y * 2 + 10f)) / 2f;
-
-            GUILayout.BeginArea(new(xPos, yPos, buttonSize.x, 9000));
-            GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new(Screen.width / defaultResolution.x, Screen.height / defaultResolution.y, 1));
+            GUILayout.BeginArea(new Rect(4, 110, 256, 9000));
+            Vector2 defaultResolution = new Vector2(1920f, 1080f);
+            GUI.matrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, new Vector3(Screen.width / defaultResolution.x, Screen.height / defaultResolution.y, 1));
 
             GUIStyle style = GUI.skin.GetStyle("button");
             int originalFontSize = style.fontSize;
-            
-            style.fontSize = 36;
+
+            Vector2 buttonSize = new Vector2(165f, 42f);
+            style.fontSize = 26;
             // Server button.
             if (Application.platform != RuntimePlatform.WebGLPlayer)
             {
                 if (GUILayout.Button($"{GetNextStateText(_serverState)} Server", GUILayout.Width(buttonSize.x), GUILayout.Height(buttonSize.y)))
                     OnClick_Server();
-                GUILayout.Space(20f);
+                GUILayout.Space(10f);
             }
 
             // Client button.
@@ -208,12 +205,7 @@ namespace FishNet.Example
             if (_serverState != LocalConnectionState.Stopped)
                 _networkManager.ServerManager.StopConnection(true);
             else
-            {
                 _networkManager.ServerManager.StartConnection();
-                // Use SendMessage to avoid assembly reference errors
-                GameObject gm = GameObject.Find("GameManager");
-                if (gm != null) gm.SendMessage("StartMultiplayerGame", SendMessageOptions.DontRequireReceiver);
-            }
 
             DeselectButtons();
         }
@@ -226,12 +218,7 @@ namespace FishNet.Example
             if (_clientState != LocalConnectionState.Stopped)
                 _networkManager.ClientManager.StopConnection();
             else
-            {
                 _networkManager.ClientManager.StartConnection();
-                // Use SendMessage to avoid assembly reference errors
-                GameObject gm = GameObject.Find("GameManager");
-                if (gm != null) gm.SendMessage("StartMultiplayerGame", SendMessageOptions.DontRequireReceiver);
-            }
 
             DeselectButtons();
         }

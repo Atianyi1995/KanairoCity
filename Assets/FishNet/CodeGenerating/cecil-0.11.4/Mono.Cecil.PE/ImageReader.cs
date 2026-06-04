@@ -196,10 +196,10 @@ namespace MonoFN.Cecil.PE
         private string ReadAlignedString(int length)
         {
             int read = 0;
-            char[] buffer = new char [length];
+            var buffer = new char [length];
             while (read < length)
             {
-                byte current = ReadByte();
+                var current = ReadByte();
                 if (current == 0)
                     break;
 
@@ -214,11 +214,11 @@ namespace MonoFN.Cecil.PE
         private string ReadZeroTerminatedString(int length)
         {
             int read = 0;
-            char[] buffer = new char [length];
-            byte[] bytes = ReadBytes(length);
+            var buffer = new char [length];
+            var bytes = ReadBytes(length);
             while (read < length)
             {
-                byte current = bytes[read];
+                var current = bytes[read];
                 if (current == 0)
                     break;
 
@@ -230,11 +230,11 @@ namespace MonoFN.Cecil.PE
 
         private void ReadSections(ushort count)
         {
-            Section[] sections = new Section [count];
+            var sections = new Section [count];
 
             for (int i = 0; i < count; i++)
             {
-                Section section = new();
+                var section = new Section();
 
                 // Name
                 section.Name = ReadZeroTerminatedString(8);
@@ -306,9 +306,9 @@ namespace MonoFN.Cecil.PE
             // Flags		2
             Advance(2);
 
-            ushort streams = ReadUInt16();
+            var streams = ReadUInt16();
 
-            Section section = image.GetSectionAtVirtualAddress(metadata.VirtualAddress);
+            var section = image.GetSectionAtVirtualAddress(metadata.VirtualAddress);
             if (section == null)
                 throw new BadImageFormatException();
 
@@ -334,11 +334,11 @@ namespace MonoFN.Cecil.PE
 
             MoveTo(image.Debug);
 
-            ImageDebugHeaderEntry[] entries = new ImageDebugHeaderEntry [(int)image.Debug.Size / ImageDebugDirectory.Size];
+            var entries = new ImageDebugHeaderEntry [(int)image.Debug.Size / ImageDebugDirectory.Size];
 
             for (int i = 0; i < entries.Length; i++)
             {
-                ImageDebugDirectory directory = new()
+                var directory = new ImageDebugDirectory
                 {
                     Characteristics = ReadInt32(),
                     TimeDateStamp = ReadInt32(),
@@ -356,11 +356,11 @@ namespace MonoFN.Cecil.PE
                     continue;
                 }
 
-                int position = Position;
+                var position = Position;
                 try
                 {
                     MoveTo((uint)directory.PointerToRawData);
-                    byte[] data = ReadBytes(directory.SizeOfData);
+                    var data = ReadBytes(directory.SizeOfData);
                     entries[i] = new(directory, data);
                 }
                 finally
@@ -380,9 +380,9 @@ namespace MonoFN.Cecil.PE
             // Size			4
             uint size = ReadUInt32();
 
-            byte[] data = ReadHeapData(offset, size);
+            var data = ReadHeapData(offset, size);
 
-            string name = ReadAlignedString(16);
+            var name = ReadAlignedString(16);
             switch (name)
             {
                 case "#~":
@@ -410,9 +410,9 @@ namespace MonoFN.Cecil.PE
 
         private byte[] ReadHeapData(uint offset, uint size)
         {
-            long position = BaseStream.Position;
+            var position = BaseStream.Position;
             MoveTo(offset + image.MetadataSection.PointerToRawData);
-            byte[] data = ReadBytes((int)size);
+            var data = ReadBytes((int)size);
             BaseStream.Position = position;
 
             return data;
@@ -420,7 +420,7 @@ namespace MonoFN.Cecil.PE
 
         private void ReadTableHeap()
         {
-            TableHeap heap = image.TableHeap;
+            var heap = image.TableHeap;
 
             MoveTo(table_heap_offset + image.MetadataSection.PointerToRawData);
 
@@ -430,7 +430,7 @@ namespace MonoFN.Cecil.PE
             Advance(6);
 
             // HeapSizes		1
-            byte sizes = ReadByte();
+            var sizes = ReadByte();
 
             // Reserved2		1
             Advance(1);
@@ -493,12 +493,12 @@ namespace MonoFN.Cecil.PE
             int guididx_size = image.GuidHeap != null ? image.GuidHeap.IndexSize : 2;
             int blobidx_size = image.BlobHeap != null ? image.BlobHeap.IndexSize : 2;
 
-            TableHeap heap = image.TableHeap;
-            TableInformation[] tables = heap.Tables;
+            var heap = image.TableHeap;
+            var tables = heap.Tables;
 
             for (int i = 0; i < Mixin.TableCount; i++)
             {
-                Table table = (Table)i;
+                var table = (Table)i;
                 if (!heap.HasTable(table))
                     continue;
 
@@ -748,9 +748,9 @@ namespace MonoFN.Cecil.PE
 
         private void ReadPdbHeap()
         {
-            PdbHeap heap = image.PdbHeap;
+            var heap = image.PdbHeap;
 
-            ByteBuffer buffer = new(heap.data);
+            var buffer = new ByteBuffer(heap.data);
 
             heap.Id = buffer.ReadBytes(20);
             heap.EntryPoint = buffer.ReadUInt32();
@@ -759,7 +759,7 @@ namespace MonoFN.Cecil.PE
 
             for (int i = 0; i < Mixin.TableCount; i++)
             {
-                Table table = (Table)i;
+                var table = (Table)i;
                 if (!heap.HasTable(table))
                     continue;
 
@@ -771,7 +771,7 @@ namespace MonoFN.Cecil.PE
         {
             try
             {
-                ImageReader reader = new(stream, file_name);
+                var reader = new ImageReader(stream, file_name);
                 reader.ReadImage();
                 return reader.image;
             }
@@ -785,8 +785,8 @@ namespace MonoFN.Cecil.PE
         {
             try
             {
-                ImageReader reader = new(stream, file_name);
-                uint length = (uint)stream.value.Length;
+                var reader = new ImageReader(stream, file_name);
+                var length = (uint)stream.value.Length;
 
                 reader.image.Sections = new[]
                 {

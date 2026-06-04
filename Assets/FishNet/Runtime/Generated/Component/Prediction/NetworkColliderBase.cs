@@ -9,6 +9,32 @@ namespace FishNet.Component.Prediction
 {
     public abstract class NetworkColliderBase : NetworkBehaviour
     {
+        #region Types.
+        protected struct CollisionData
+        {
+            /// <summary>
+            /// Tick when entering collision.
+            /// </summary>
+            public uint EnterTick;
+            /// <summary>
+            /// Tick when exiting collision.
+            /// </summary>
+            public uint ExitTick;
+
+            public CollisionData(uint enterTick) : this()
+            {
+                EnterTick = enterTick;
+                ExitTick = Managing.Timing.TimeManager.UNSET_TICK;
+            }
+
+            public CollisionData(uint enterTick, uint exitTick) : this()
+            {
+                EnterTick = enterTick;
+                ExitTick = exitTick;
+            }
+        }
+        #endregion
+
         /// <summary>
         /// True to run collisions for colliders which are triggers, false to run collisions for colliders which are not triggers.
         /// </summary>
@@ -50,21 +76,15 @@ namespace FishNet.Component.Prediction
         /// </summary>
         [HideInInspector]
         protected int InteractableLayers;
-        /// <summary>
-        /// True if stopping or destroying.
-        /// </summary>
-        [HideInInspector]
-        protected bool IsStopping;
 
         protected virtual void Awake()
         {
             TryFindColliders(force: true);
+            ;
         }
 
         public override void OnStartNetwork()
         {
-            IsStopping = false;
-            
             // Events needed by server and client.
             TimeManager.OnPostPhysicsSimulation += TimeManager_OnPostPhysicsSimulation;
         }
@@ -72,33 +92,26 @@ namespace FishNet.Component.Prediction
         public override void OnStartClient()
         {
             // Events only needed by the client.
-            PredictionManager.OnPostPhysicsTransformSync += PredictionManager_OnPostPhysicsTransformSync;
+            PredictionManager.OnPostReplicateReplay += PredictionManager_OnPostReplicateReplay;
+            PredictionManager.OnPostReconcileSyncTransforms += PredictionManager_OnPreReconcile;
         }
 
         public override void OnStopClient()
         {
             // Events only needed by the client.
-            PredictionManager.OnPostPhysicsTransformSync -= PredictionManager_OnPostPhysicsTransformSync;
+            PredictionManager.OnPostReplicateReplay -= PredictionManager_OnPostReplicateReplay;
+            PredictionManager.OnPostReconcileSyncTransforms -= PredictionManager_OnPreReconcile;
         }
 
         public override void OnStopNetwork()
         {
-            IsStopping = true;
-            
             TimeManager.OnPostPhysicsSimulation -= TimeManager_OnPostPhysicsSimulation;
         }
 
-        protected virtual void OnDestroy()
-        {
-            IsStopping = true;
-
-            if (TimeManager != null)
-                TimeManager.OnPostPhysicsSimulation -= TimeManager_OnPostPhysicsSimulation;
-            if (PredictionManager != null)
-                PredictionManager.OnPostPhysicsTransformSync -= PredictionManager_OnPostPhysicsTransformSync;
-        }
-        
-        protected virtual void PredictionManager_OnPostPhysicsTransformSync(uint clientTick, uint serverTick)
+        /// <summary>
+        /// Called by the PredictionManager immediately before a reconcile begins.
+        /// </summary>
+        protected virtual void PredictionManager_OnPreReconcile(uint clientTick, uint serverTick)
         {
             CheckColliders(clientTick);
         }
@@ -109,19 +122,23 @@ namespace FishNet.Component.Prediction
         /// This may be useful if you wish to run physics differently for stacked scenes.
         private void TimeManager_OnPostPhysicsSimulation(float delta)
         {
-            uint tick = IsServerStarted || !PredictionManager.IsReconciling ? TimeManager.LocalTick : PredictionManager.ClientReplayTick;
-            CheckColliders(tick);
+            CheckColliders(TimeManager.LocalTick);
         }
-        
+
+        /// <summary>
+        /// Called after physics is simulated when replaying a replicate method.
+        /// </summary>
+        private void PredictionManager_OnPostReplicateReplay(uint clientTick, uint serverTick)
+        {
+            CheckColliders(clientTick);
+        }
+
         /// <summary>
         /// Returns if colliders should be checked. If colliders can be checked data needed by all collider checks (2D and 3D) is set.
         /// </summary>
         /// <returns>True if collision checking should proceed, false if not.</returns>
         protected bool TryPrepareColliderCheck(uint tick)
         {
-            if (IsStopping)
-                return false;
-            
             // Should not be possible as tick always starts on 1.
             if (tick == TimeManagerCls.UNSET_TICK)
                 return false;
@@ -151,7 +168,7 @@ namespace FishNet.Component.Prediction
         /// <summary>
         /// Implement collider checking logic within this method.
         /// </summary>
-        protected abstract void CheckColliders(uint localTick);
+        protected abstract void CheckColliders(uint clientTick);
 
         /// <summary>
         /// Clears stored collider states.

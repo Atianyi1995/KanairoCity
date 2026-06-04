@@ -41,16 +41,12 @@ namespace FishNet.Serializing
         /// </summary>
         public NetworkManager NetworkManager;
         #endregion
-        
+
         #region Private.
         /// <summary>
         /// Buffer to prevent new allocations. This will grow as needed.
         /// </summary>
         private byte[] _buffer = new byte[64];
-        /// <summary>
-        /// A buffer convert Guid data.
-        /// </summary>
-        private static readonly byte[] _guidBuffer = new byte[16];
         #endregion
 
         #region Const.
@@ -557,12 +553,6 @@ namespace FishNet.Serializing
         public void WriteArraySegment(ArraySegment<byte> value) => WriteUInt8Array(value.Array, value.Offset, value.Count);
 
         /// <summary>
-        /// Writes AutoPackType.
-        /// </summary>
-        [DefaultWriter]
-        public void WriteAutoPackType(AutoPackType apt) => WriteUInt8Unpacked((byte)apt);
-
-        /// <summary>
         /// Writes a Vector2.
         /// </summary>
         /// <param name = "value"></param>
@@ -739,12 +729,13 @@ namespace FishNet.Serializing
         /// Reads a Quaternion.
         /// </summary>
         /// <returns></returns>
-        public void WriteQuaternion(Quaternion value, AutoPackType autoPackType)
+        internal void WriteQuaternion(Quaternion value, AutoPackType autoPackType)
         {
             switch (autoPackType)
             {
                 case AutoPackType.Packed:
                     WriteQuaternion32(value);
+                    ;
                     break;
                 case AutoPackType.PackedLess:
                     WriteQuaternion64(value);
@@ -861,15 +852,11 @@ namespace FishNet.Serializing
         /// </summary>
         /// <param name = "value"></param>
         [DefaultWriter]
-        public void WriteGuid(Guid value)
+        public void WriteGuidAllocated(Guid value)
         {
-            byte[] data = _guidBuffer;
-            value.TryWriteBytes(data);
+            byte[] data = value.ToByteArray();
             WriteUInt8Array(data, 0, data.Length);
         }
-
-        [Obsolete("Use WriteGuid instead.")]
-        public void WriteGuidAllocated(Guid value) => WriteGuid(value);
 
         /// <summary>
         /// Writes a tick without packing.
@@ -948,38 +935,22 @@ namespace FishNet.Serializing
         {
             if (nob == null)
             {
-                WriteNullReferenceId();
-                return;
-            }
-
-            bool spawned = nob.IsSpawned;
-
-            if (!spawned)
-            {
-                /* If not spawned and IsInitializedNested is true
-                 * we must send as a null reference rather than
-                 * the prefabId. Even though the nob might
-                 * be a prefab, it's being written as a child
-                 * in this case. */
-                if (nob.IsInitializedNested)
-                {
-                    WriteNullReferenceId();
-                    return;
-                }
-
-                WriteNetworkObjectId(nob.PrefabId);
+                WriteNetworkObjectId(NetworkObject.UNSET_OBJECTID_VALUE);
             }
             else
             {
-                WriteNetworkObjectId(nob.ObjectId);
+                bool spawned = nob.IsSpawned;
+
+                if (spawned)
+                    WriteNetworkObjectId(nob.ObjectId);
+                else
+                    WriteNetworkObjectId(nob.PrefabId);
+
+                /* Spawned is written after because it's only needed if nob
+                 * is not null. If it were written before it would also have
+                 * to be written when nob == null.*/
+                WriteBoolean(spawned);
             }
-
-            /* Spawned is written after because it's only needed if nob
-             * is not null. If it were written before it would also have
-             * to be written when nob == null.*/
-            WriteBoolean(spawned);
-
-            void WriteNullReferenceId() => WriteNetworkObjectId(NetworkObject.UNSET_OBJECTID_VALUE);
         }
 
         /// <summary>
@@ -1141,7 +1112,7 @@ namespace FishNet.Serializing
         /// <param name = "value"> </param>
         public void WriteUnsignedPackedWhole(ulong value)
         {
-            EnsureBufferLength(10);
+            EnsureBufferLength(9);
             while (value > 127)
             {
                 _buffer[Position++] = (byte)((value & 0x7F) | 0x80);

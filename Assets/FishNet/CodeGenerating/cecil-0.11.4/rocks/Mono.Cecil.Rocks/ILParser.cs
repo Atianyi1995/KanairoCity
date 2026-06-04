@@ -69,10 +69,10 @@ namespace MonoFN.Cecil.Rocks
 
         private static void ParseMethod(MethodDefinition method, IILVisitor visitor)
         {
-            ParseContext context = CreateContext(method, visitor);
-            CodeReader code = context.Code;
+            var context = CreateContext(method, visitor);
+            var code = context.Code;
 
-            byte flags = code.ReadByte();
+            var flags = code.ReadByte();
 
             switch (flags & 0x3)
             {
@@ -93,8 +93,8 @@ namespace MonoFN.Cecil.Rocks
 
         private static ParseContext CreateContext(MethodDefinition method, IILVisitor visitor)
         {
-            CodeReader code = method.Module.Read(method, (_, reader) => reader.code);
-            int position = code.MoveTo(method);
+            var code = method.Module.Read(method, (_, reader) => reader.code);
+            var position = code.MoveTo(method);
 
             return new()
             {
@@ -107,11 +107,11 @@ namespace MonoFN.Cecil.Rocks
 
         private static void ParseFatMethod(ParseContext context)
         {
-            CodeReader code = context.Code;
+            var code = context.Code;
 
             code.Advance(4);
-            int code_size = code.ReadInt32();
-            MetadataToken local_var_token = code.ReadToken();
+            var code_size = code.ReadInt32();
+            var local_var_token = code.ReadToken();
 
             if (local_var_token != MetadataToken.Zero)
                 context.Variables = code.ReadVariables(local_var_token);
@@ -121,17 +121,17 @@ namespace MonoFN.Cecil.Rocks
 
         private static void ParseCode(int code_size, ParseContext context)
         {
-            CodeReader code = context.Code;
-            MetadataReader metadata = context.Metadata;
-            IILVisitor visitor = context.Visitor;
+            var code = context.Code;
+            var metadata = context.Metadata;
+            var visitor = context.Visitor;
 
-            int start = code.Position;
-            int end = start + code_size;
+            var start = code.Position;
+            var end = start + code_size;
 
             while (code.Position < end)
             {
-                byte il_opcode = code.ReadByte();
-                OpCode opcode = il_opcode != 0xfe ? OpCodes.OneByteOpCode[il_opcode] : OpCodes.TwoBytesOpCode[code.ReadByte()];
+                var il_opcode = code.ReadByte();
+                var opcode = il_opcode != 0xfe ? OpCodes.OneByteOpCode[il_opcode] : OpCodes.TwoBytesOpCode[code.ReadByte()];
 
                 switch (opcode.OperandType)
                 {
@@ -139,8 +139,8 @@ namespace MonoFN.Cecil.Rocks
                         visitor.OnInlineNone(opcode);
                         break;
                     case OperandType.InlineSwitch:
-                        int length = code.ReadInt32();
-                        int[] branches = new int [length];
+                        var length = code.ReadInt32();
+                        var branches = new int [length];
                         for (int i = 0; i < length; i++)
                             branches[i] = code.ReadInt32();
                         visitor.OnInlineSwitch(opcode, branches);
@@ -191,7 +191,7 @@ namespace MonoFN.Cecil.Rocks
                     case OperandType.InlineField:
                     case OperandType.InlineMethod:
                     case OperandType.InlineType:
-                        IMetadataTokenProvider member = metadata.LookupToken(code.ReadToken());
+                        var member = metadata.LookupToken(code.ReadToken());
                         switch (member.MetadataToken.TokenType)
                         {
                             case TokenType.TypeDef:
@@ -207,14 +207,14 @@ namespace MonoFN.Cecil.Rocks
                                 visitor.OnInlineField(opcode, (FieldReference)member);
                                 break;
                             case TokenType.MemberRef:
-                                FieldReference field_ref = member as FieldReference;
+                                var field_ref = member as FieldReference;
                                 if (field_ref != null)
                                 {
                                     visitor.OnInlineField(opcode, field_ref);
                                     break;
                                 }
 
-                                MethodReference method_ref = member as MethodReference;
+                                var method_ref = member as MethodReference;
                                 if (method_ref != null)
                                 {
                                     visitor.OnInlineMethod(opcode, method_ref);

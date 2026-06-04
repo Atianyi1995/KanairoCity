@@ -68,7 +68,7 @@ namespace MonoFN.Cecil
                 if (packing_size != Mixin.NotResolvedMarker || class_size != Mixin.NotResolvedMarker)
                     return;
 
-                Row<short, int> row = Module.Read(this, (type, reader) => reader.ReadTypeLayout(type));
+                var row = Module.Read(this, (type, reader) => reader.ReadTypeLayout(type));
 
                 packing_size = row.Col1;
                 class_size = row.Col2;
@@ -495,7 +495,7 @@ namespace MonoFN.Cecil
             if (!HasNestedTypes)
                 return;
 
-            Collection<TypeDefinition> nested_types = NestedTypes;
+            var nested_types = NestedTypes;
 
             for (int i = 0; i < nested_types.Count; i++)
                 nested_types[i].ClearFullName();
@@ -600,11 +600,11 @@ namespace MonoFN.Cecil
     {
         public static TypeReference GetEnumUnderlyingType(this TypeDefinition self)
         {
-            Collection<FieldDefinition> fields = self.Fields;
+            var fields = self.Fields;
 
             for (int i = 0; i < fields.Count; i++)
             {
-                FieldDefinition field = fields[i];
+                var field = fields[i];
                 if (!field.IsStatic)
                     return field.FieldType;
             }
@@ -617,11 +617,11 @@ namespace MonoFN.Cecil
             if (!self.HasNestedTypes)
                 return null;
 
-            Collection<TypeDefinition> nested_types = self.NestedTypes;
+            var nested_types = self.NestedTypes;
 
             for (int i = 0; i < nested_types.Count; i++)
             {
-                TypeDefinition nested_type = nested_types[i];
+                var nested_type = nested_types[i];
 
                 if (nested_type.TypeFullName() == fullname)
                     return nested_type;

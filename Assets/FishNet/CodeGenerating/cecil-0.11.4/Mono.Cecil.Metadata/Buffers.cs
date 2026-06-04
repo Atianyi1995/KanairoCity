@@ -47,7 +47,7 @@ namespace MonoFN.Cecil.Metadata
 
         public TTable GetTable<TTable>(Table table) where TTable : MetadataTable, new()
         {
-            TTable md_table = (TTable)tables[(int)table];
+            var md_table = (TTable)tables[(int)table];
             if (md_table != null)
                 return md_table;
 
@@ -94,8 +94,8 @@ namespace MonoFN.Cecil.Metadata
 
         private int GetCodedIndexSize(CodedIndex coded_index)
         {
-            int index = (int)coded_index;
-            int size = coded_index_sizes[index];
+            var index = (int)coded_index;
+            var size = coded_index_sizes[index];
             if (size != 0)
                 return size;
 
@@ -125,7 +125,7 @@ namespace MonoFN.Cecil.Metadata
         {
             for (int i = 0; i < tables.Length; i++)
             {
-                MetadataTable table = tables[i];
+                var table = tables[i];
                 if (table == null || table.Length == 0)
                     continue;
 
@@ -137,7 +137,7 @@ namespace MonoFN.Cecil.Metadata
         {
             for (int i = 0; i < tables.Length; i++)
             {
-                MetadataTable table = tables[i];
+                var table = tables[i];
                 if (table == null || table.Length == 0)
                     continue;
 
@@ -151,7 +151,7 @@ namespace MonoFN.Cecil.Metadata
 
             for (int i = 0; i < tables.Length; i++)
             {
-                MetadataTable table = tables[i];
+                var table = tables[i];
                 if (table == null || table.Length == 0)
                     continue;
 
@@ -172,10 +172,10 @@ namespace MonoFN.Cecil.Metadata
 
         private void ComputeTableInformations(TableHeapBuffer table_heap)
         {
-            MetadataTable[] tables = table_heap.tables;
+            var tables = table_heap.tables;
             for (int i = 0; i < tables.Length; i++)
             {
-                MetadataTable table = tables[i];
+                var table = tables[i];
                 if (table != null && table.Length > 0)
                     table_infos[i].Length = (uint)table.Length;
             }
@@ -220,17 +220,17 @@ namespace MonoFN.Cecil.Metadata
 
         public void FixupData(RVA data_rva)
         {
-            FieldRVATable table = GetTable<FieldRVATable>(Table.FieldRVA);
+            var table = GetTable<FieldRVATable>(Table.FieldRVA);
             if (table.length == 0)
                 return;
 
-            int field_idx_size = GetTable<FieldTable>(Table.Field).IsLarge ? 4 : 2;
-            int previous = position;
+            var field_idx_size = GetTable<FieldTable>(Table.Field).IsLarge ? 4 : 2;
+            var previous = position;
 
             position = table.position;
             for (int i = 0; i < table.length; i++)
             {
-                uint rva = ReadUInt32();
+                var rva = ReadUInt32();
                 position -= 4;
                 WriteUInt32(rva + data_rva);
                 position += field_idx_size;
@@ -246,7 +246,7 @@ namespace MonoFN.Cecil.Metadata
 
         public uint AddResource(byte[] resource)
         {
-            uint offset = (uint)position;
+            var offset = (uint)position;
             WriteInt32(resource.Length);
             WriteBytes(resource);
             return offset;
@@ -259,7 +259,7 @@ namespace MonoFN.Cecil.Metadata
 
         public RVA AddData(byte[] data)
         {
-            RVA rva = (RVA)position;
+            var rva = (RVA)position;
             WriteBytes(data);
             return rva;
         }
@@ -328,20 +328,20 @@ namespace MonoFN.Cecil.Metadata
 
         public uint[] WriteStrings()
         {
-            List<KeyValuePair<string, uint>> sorted = SortStrings(strings);
+            var sorted = SortStrings(strings);
             strings = null;
 
             // Add 1 for empty string whose index and offset are both 0
-            uint[] string_offsets = new uint [sorted.Count + 1];
+            var string_offsets = new uint [sorted.Count + 1];
             string_offsets[0] = 0;
 
             // Find strings that can be folded
-            string previous = string.Empty;
-            foreach (KeyValuePair<string, uint> entry in sorted)
+            var previous = string.Empty;
+            foreach (var entry in sorted)
             {
-                string @string = entry.Key;
-                uint index = entry.Value;
-                int position = this.position;
+                var @string = entry.Key;
+                var index = entry.Value;
+                var position = this.position;
 
                 if (previous.EndsWith(@string, StringComparison.Ordinal) && !IsLowSurrogateChar(entry.Key[0]))
                 {
@@ -362,7 +362,7 @@ namespace MonoFN.Cecil.Metadata
 
         private static List<KeyValuePair<string, uint>> SortStrings(Dictionary<string, uint> strings)
         {
-            List<KeyValuePair<string, uint>> sorted = new(strings);
+            var sorted = new List<KeyValuePair<string, uint>>(strings);
             sorted.Sort(new SuffixSort());
             return sorted;
         }
@@ -384,8 +384,8 @@ namespace MonoFN.Cecil.Metadata
         {
             public int Compare(KeyValuePair<string, uint> xPair, KeyValuePair<string, uint> yPair)
             {
-                string x = xPair.Key;
-                string y = yPair.Key;
+                var x = xPair.Key;
+                var y = yPair.Key;
 
                 for (int i = x.Length - 1, j = y.Length - 1; (i >= 0) & (j >= 0); i--, j--)
                 {
@@ -459,7 +459,7 @@ namespace MonoFN.Cecil.Metadata
 
             for (int i = 0; i < @string.Length; i++)
             {
-                char @char = @string[i];
+                var @char = @string[i];
                 WriteUInt16(@char);
 
                 if (special == 1)

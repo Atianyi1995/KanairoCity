@@ -3,15 +3,18 @@
 #endif
 using FishNet.CodeGenerating;
 using FishNet.Connection;
+using FishNet.Documenting;
 using FishNet.Managing;
 using FishNet.Object;
 using FishNet.Object.Prediction;
 using FishNet.Serializing.Helping;
 using FishNet.Transporting;
 using FishNet.Utility;
+using FishNet.Utility.Performance;
 using GameKit.Dependencies.Utilities;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using UnityEngine;
@@ -73,7 +76,7 @@ namespace FishNet.Serializing
         /// Value may not always be set.
         /// </summary>
         public NetworkConnection NetworkConnection { get; private set; }
-        #if DEVELOPMENT
+#if DEVELOPMENT
         /// <summary>
         /// Last NetworkObject parsed.
         /// </summary>
@@ -82,7 +85,7 @@ namespace FishNet.Serializing
         /// Last NetworkBehaviour parsed.
         /// </summary>
         public static NetworkBehaviour LastNetworkBehaviour { get; private set; }
-        #endif
+#endif
         #endregion
 
         #region Private.
@@ -98,10 +101,6 @@ namespace FishNet.Serializing
         /// Used to convert bytes to a GUID.
         /// </summary>
         private static readonly byte[] _guidBuffer = new byte[16];
-        // /// <summary>
-        // /// True if the data being read is from a remote client; a remote client means not clientHost, and not server.
-        // /// </summary>
-        // private bool _isFromRemoteClient;
         #endregion
 
         public Reader() { }
@@ -110,12 +109,13 @@ namespace FishNet.Serializing
         {
             Initialize(bytes, networkManager, networkConnection, source);
         }
-        
+
         public Reader(ArraySegment<byte> segment, NetworkManager networkManager, NetworkConnection networkConnection = null, DataSource source = DataSource.Unset)
         {
             Initialize(segment, networkManager, networkConnection, source);
         }
-        
+
+        /// <summary>
         /// Outputs reader to string.
         /// </summary>
         /// <returns></returns>
@@ -148,8 +148,8 @@ namespace FishNet.Serializing
         {
             if (Remaining == 0)
                 return default;
-
-            return new(_buffer, Position, Remaining);
+            else
+                return new(_buffer, Position, Remaining);
         }
 
         /// <summary>
@@ -157,28 +157,27 @@ namespace FishNet.Serializing
         /// </summary>
         public void Initialize(ArraySegment<byte> segment, NetworkManager networkManager, DataSource source = DataSource.Unset)
         {
-            Initialize(segment, networkManager, sender: null, source);
+            Initialize(segment, networkManager, null, source);
         }
 
-        
         /// <summary>
         /// Initializes this reader with data.
         /// </summary>
-        public void Initialize(ArraySegment<byte> segment, NetworkManager networkManager, NetworkConnection sender = null, DataSource source = DataSource.Unset)
+        public void Initialize(ArraySegment<byte> segment, NetworkManager networkManager, NetworkConnection networkConnection = null, DataSource source = DataSource.Unset)
         {
             _buffer = segment.Array;
             if (_buffer == null)
-                _buffer = Array.Empty<byte>();
+                _buffer = new byte[0];
 
             Position = segment.Offset;
             Offset = segment.Offset;
             Length = segment.Count;
 
             NetworkManager = networkManager;
-            NetworkConnection = sender;
+            NetworkConnection = networkConnection;
             Source = source;
         }
-    
+
         /// <summary>
         /// Initializes this reader with data.
         /// </summary>
@@ -186,16 +185,15 @@ namespace FishNet.Serializing
         {
             Initialize(new ArraySegment<byte>(bytes), networkManager, null, source);
         }
-        
+
         /// <summary>
         /// Initializes this reader with data.
         /// </summary>
-        public void Initialize(byte[] bytes, NetworkManager networkManager, NetworkConnection sender = null, DataSource source = DataSource.Unset)
+        public void Initialize(byte[] bytes, NetworkManager networkManager, NetworkConnection networkConnection = null, DataSource source = DataSource.Unset)
         {
-            Initialize(new ArraySegment<byte>(bytes), networkManager, sender, source);
+            Initialize(new ArraySegment<byte>(bytes), networkManager, networkConnection, source);
         }
-        
-        
+
         /// <summary>
         /// Reads length. This method is used to make debugging easier.
         /// </summary>
@@ -352,9 +350,6 @@ namespace FishNet.Serializing
                 Position += Remaining;
                 return default;
             }
-
-            if (IsPossibleAllocationAttack(count, movePositionOnTrue: true))
-                return default;
 
             ArraySegment<byte> result = new(_buffer, Position, count);
             Position += count;
@@ -571,7 +566,7 @@ namespace FishNet.Serializing
 
             if (length == 0)
                 return string.Empty;
-            if (IsPossibleAllocationAttack(length, movePositionOnTrue: true))
+            if (!CheckAllocationAttack(length))
                 return string.Empty;
 
             ArraySegment<byte> data = ReadArraySegment(length);
@@ -627,12 +622,6 @@ namespace FishNet.Serializing
 
             return ReadArraySegment(size);
         }
-
-        /// <summary>
-        /// Reads AutoPackType.
-        /// </summary>
-        [DefaultReader]
-        public AutoPackType ReadAutoPackType() => (AutoPackType)ReadUInt8Unpacked();
 
         /// <summary>
         /// Reads a Vector2.
@@ -765,7 +754,7 @@ namespace FishNet.Serializing
         /// Reads a Quaternion.
         /// </summary>
         /// <returns></returns>
-        public Quaternion ReadQuaternion(AutoPackType autoPackType)
+        internal Quaternion ReadQuaternion(AutoPackType autoPackType)
         {
             switch (autoPackType)
             {
@@ -888,11 +877,9 @@ namespace FishNet.Serializing
                 NetworkManager.Log($"Bytes count cannot be less than 0.");
                 // Purge renaming and return default.
                 Position += Remaining;
-                return null;
+                return default;
             }
 
-            if (IsPossibleAllocationAttack(count, movePositionOnTrue: true))
-                return null;
 
             byte[] bytes = new byte[count];
             ReadUInt8Array(ref bytes, count);
@@ -983,9 +970,9 @@ namespace FishNet.Serializing
         /// <returns></returns>
         public NetworkObject ReadNetworkObject(out int objectOrPrefabId, HashSet<int> readSpawningObjects = null, bool logException = true)
         {
-            #if DEVELOPMENT
+#if DEVELOPMENT
             LastNetworkBehaviour = null;
-            #endif
+#endif
             objectOrPrefabId = ReadNetworkObjectId();
 
             bool isSpawned;
@@ -996,8 +983,8 @@ namespace FishNet.Serializing
              * never happen so long as nob isn't null. */
             if (objectOrPrefabId == NetworkObject.UNSET_OBJECTID_VALUE)
                 return null;
-
-            isSpawned = ReadBoolean();
+            else
+                isSpawned = ReadBoolean();
 
             bool isServer = NetworkManager.ServerManager.Started;
             bool isClient = NetworkManager.ClientManager.Started;
@@ -1036,9 +1023,9 @@ namespace FishNet.Serializing
                 result = NetworkManager.GetPrefab(objectOrPrefabId, asServer);
             }
 
-            #if DEVELOPMENT
+#if DEVELOPMENT
             LastNetworkObject = result;
-            #endif
+#endif
             return result;
         }
 
@@ -1113,9 +1100,9 @@ namespace FishNet.Serializing
                 }
             }
 
-            #if DEVELOPMENT
+#if DEVELOPMENT
             LastNetworkBehaviour = result;
-            #endif
+#endif
             return result;
         }
 
@@ -1187,48 +1174,56 @@ namespace FishNet.Serializing
         {
             int value = ReadNetworkConnectionId();
             if (value == NetworkConnection.UNSET_CLIENTID_VALUE)
-                return NetworkManager.EmptyConnection;
-
-            NetworkConnection result;
-
-            // Prefer server.
-            if (NetworkManager.IsServerStarted)
             {
-                if (NetworkManager.ServerManager.Clients.TryGetValueIL2CPP(value, out result))
+                return NetworkManager.EmptyConnection;
+            }
+            else
+            {
+                // Prefer server.
+                if (NetworkManager.IsServerStarted)
                 {
-                    return result;
+                    NetworkConnection result;
+                    if (NetworkManager.ServerManager.Clients.TryGetValueIL2CPP(value, out result))
+                    {
+                        return result;
+                    }
+                    // If also client then try client side data.
+                    else if (NetworkManager.IsClientStarted)
+                    {
+                        // If found in client collection then return.
+                        if (NetworkManager.ClientManager.Clients.TryGetValueIL2CPP(value, out result))
+                            return result;
+                        /* Otherwise make a new instance.
+                         * We do not know if this is for the server or client so
+                         * initialize it either way. Connections rarely come through
+                         * without being in server/client side collection. */
+                        else
+                            return new(NetworkManager, value, -1, true);
+                    }
+                    // Only server and not found.
+                    else
+                    {
+                        NetworkManager.LogWarning($"Unable to find connection for read Id {value}. An empty connection will be returned.");
+                        return NetworkManager.EmptyConnection;
+                    }
                 }
-                // If also client then try client side data.
-                else if (NetworkManager.IsClientStarted)
+                // Try client side, will only be able to fetch against local connection.
+                else
                 {
-                    // If found in client collection then return.
-                    if (NetworkManager.ClientManager.Clients.TryGetValueIL2CPP(value, out result))
+                    // If value is self then return self.
+                    if (value == NetworkManager.ClientManager.Connection.ClientId)
+                        return NetworkManager.ClientManager.Connection;
+                    // Try client side dictionary.
+                    else if (NetworkManager.ClientManager.Clients.TryGetValueIL2CPP(value, out NetworkConnection result))
                         return result;
                     /* Otherwise make a new instance.
                      * We do not know if this is for the server or client so
                      * initialize it either way. Connections rarely come through
                      * without being in server/client side collection. */
-
-                    return new(NetworkManager, value, -1, true);
+                    else
+                        return new(NetworkManager, value, -1, true);
                 }
-
-                // Only server and not found.
-                NetworkManager.LogWarning($"Unable to find connection for read Id {value}. An empty connection will be returned.");
-                return NetworkManager.EmptyConnection;
             }
-
-            // Try client side, will only be able to fetch against local connection.
-            // If value is self then return self.
-            if (value == NetworkManager.ClientManager.Connection.ClientId)
-                return NetworkManager.ClientManager.Connection;
-            // Try client side dictionary.
-            if (NetworkManager.ClientManager.Clients.TryGetValueIL2CPP(value, out result))
-                return result;
-            /* Otherwise make a new instance.
-             * We do not know if this is for the server or client so
-             * initialize it either way. Connections rarely come through
-             * without being in server/client side collection. */
-            return new(NetworkManager, value, -1, true);
         }
 
         /// <summary>
@@ -1247,45 +1242,26 @@ namespace FishNet.Serializing
         /// <summary>
         /// Checks if the size could possibly be an allocation attack.
         /// </summary>
-        /// <param name="movePositionOnTrue">True when on possible attacks to move the Position to the end of the reader to prevent further reads.</param>
-        private bool IsPossibleAllocationAttack(int size, bool movePositionOnTrue)
+        /// <param name = "size"></param>
+        private bool CheckAllocationAttack(int size)
         {
-            /* Types which do not have set sizes cannot be determined
-             * by size. It is however safe to assume that if a count(or size)
-             * exceeds remaining bytes then an attack is possible. This is
-             * true because at least 1 byte must be written to indicate null, which
-             * means even a collection of 50 null entries would still use at least
-             * 1 byte.
-             *
-             * For types that do not have set sizes the collections are not
-             * reserved in memory, resize collections as needed rather than the new
-             * keyword. This trades minor GC during possible resizes but offsets possible
-             * attacks. */
-
-            bool isPossibleAttack = false;
-
-            /* Log is used over LogError to prevent logging
-             * spam on the server. Generally server builds only
-             * write error logs. */
-            
             /* Possible attacks. Impossible size, or size indicates
              * more elements in collection or more bytes needed
              * than what bytes are available. */
-            if (size < 0)
+            if (size != Writer.UNSET_COLLECTION_SIZE_VALUE && size < 0)
             {
-                NetworkManager.Log($"Size of {size} is invalid.");
-                isPossibleAttack = true;
-            }
-            else if (size > Remaining)
-            {
-                NetworkManager.Log($"Read size of {size} is larger than remaining data of {Remaining}.");
-                isPossibleAttack = true;
+                NetworkManager.LogError($"Size of {size} is invalid.");
+                return false;
             }
 
-            if (isPossibleAttack && movePositionOnTrue)
-                Position += Remaining;
-            
-            return isPossibleAttack;
+            if (size > Remaining)
+            {
+                NetworkManager.LogError($"Read size of {size} is larger than remaining data of {Remaining}.");
+                return false;
+            }
+
+            // Checks pass.
+            return true;
         }
 
         /// <summary>
@@ -1457,12 +1433,17 @@ namespace FishNet.Serializing
         /// </summary>
         private void ReadDictionary<TKey, TValue>(int count, Dictionary<TKey, TValue> collection)
         {
-            if (IsPossibleAllocationAttack(count, movePositionOnTrue: true))
-                return;
+            if (count < 0)
+            {
+                NetworkManager.LogError($"Collection count cannot be less than 0.");
+                // Purge renaming and return default.
+                Position += Remaining;
 
-            //See IsPossibleAllocationAttack for why this is not initialized with count.
+                return;
+            }
+
             if (collection == null)
-                collection = new();
+                collection = new(count);
             else
                 collection.Clear();
 
@@ -1526,14 +1507,20 @@ namespace FishNet.Serializing
         /// </summary>
         private void ReadList<T>(int count, ref List<T> collection)
         {
-            if (IsPossibleAllocationAttack(count, movePositionOnTrue: true))
-                return;
+            if (count < 0)
+            {
+                NetworkManager.LogError($"List count cannot be less than 0.");
+                // Purge renaming and return default.
+                Position += Remaining;
 
-            //See IsPossibleAllocationAttack for why this is not initialized with count.
+                return;
+            }
+
             if (collection == null)
-                collection = new();
+                collection = new(count);
             else
                 collection.Clear();
+
 
             for (int i = 0; i < count; i++)
                 collection.Add(Read<T>());
@@ -1585,15 +1572,21 @@ namespace FishNet.Serializing
         /// </summary>
         private void ReadHashSet<T>(int count, ref HashSet<T> collection)
         {
-            if (IsPossibleAllocationAttack(count, movePositionOnTrue: true))
-                return;
+            if (count < 0)
+            {
+                NetworkManager.LogError($"List count cannot be less than 0.");
+                // Purge renaming and return default.
+                Position += Remaining;
 
-            //See IsPossibleAllocationAttack for why this is not initialized with count.
+                return;
+            }
+
             if (collection == null)
-                collection = new();
+                collection = new(count);
             else
                 collection.Clear();
-            
+
+
             for (int i = 0; i < count; i++)
                 collection.Add(Read<T>());
         }
@@ -1630,29 +1623,22 @@ namespace FishNet.Serializing
                 return 0;
             }
 
-            if (IsPossibleAllocationAttack(count, movePositionOnTrue: true))
-                return 0;
+            if (count < 0)
+            {
+                NetworkManager.Log($"Array count cannot be less than 0.");
+                // Purge renaming and return default.
+                Position += Remaining;
+                return default;
+            }
 
-            /* Read to a list then move the values into an array.
-             * This does cost some extra overhead but this method
-             * is expected to rarely be used, and this guards against
-             * a memory allocation attack. */
-
-            List<T> listResults = CollectionCaches<T>.RetrieveList();
-            for (int i = 0; i < count; i++)
-                listResults.Add(Read<T>());
-
-            /* If here then reader was not overflowed; it is
-             * safe to allocate the array and copy. */
+            // Initialize buffer if not already done.
             if (collection == null)
                 collection = new T[count];
             else if (collection.Length < count)
                 Array.Resize(ref collection, count);
 
             for (int i = 0; i < count; i++)
-                collection[i] = listResults[i];
-
-            CollectionCaches<T>.Store(listResults);
+                collection[i] = Read<T>();
 
             return count;
         }

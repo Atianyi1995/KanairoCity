@@ -309,10 +309,7 @@ namespace FishNet.Observing
             if (!_initialized)
             {
                 string goName = gameObject == null ? "Empty" : gameObject.name;
-                
-                NetworkManager nm = _networkObject == null ? null : _networkObject.NetworkManager;
-                nm.LogError($"{GetType().Name} is not initialized on NetworkObject [{goName}]. RebuildObservers should not be called. If you are able to reproduce this error consistently please report this issue.");
-                
+                NetworkManagerExtensions.LogError($"{GetType().Name} is not initialized on NetworkObject [{goName}]. RebuildObservers should not be called. If you are able to reproduce this error consistently please report this issue.");
                 return ObserverStateChange.Unchanged;
             }
 

@@ -24,7 +24,6 @@ namespace FishNet.Managing.Scened
             return names;
         }
 
-        
         /// <summary>
         /// Returns Names from SceneLookupData.
         /// </summary>
@@ -62,7 +61,6 @@ namespace FishNet.Managing.Scened
             {
                 if (string.IsNullOrEmpty(Name))
                     return string.Empty;
-                
                 string name = System.IO.Path.GetFileName(Name);
                 return RemoveUnityExtension(name);
             }

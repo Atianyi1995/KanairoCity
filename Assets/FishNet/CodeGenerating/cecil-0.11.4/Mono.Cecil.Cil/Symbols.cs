@@ -16,7 +16,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
-using MonoFN.Cecil.Metadata;
 using SR = System.Reflection;
 
 namespace MonoFN.Cecil.Cil
@@ -634,7 +633,7 @@ namespace MonoFN.Cecil.Cil
             if (debug_reader == null)
                 throw new InvalidOperationException();
 
-            Row<byte[], bool> row = debug_reader.ReadEmbeddedSourceDebugInformation(index);
+            var row = debug_reader.ReadEmbeddedSourceDebugInformation(index);
             content = row.Col1;
             compress = row.Col2;
             resolved = true;
@@ -721,11 +720,11 @@ namespace MonoFN.Cecil.Cil
 
         public IDictionary<Instruction, SequencePoint> GetSequencePointMapping()
         {
-            Dictionary<Instruction, SequencePoint> instruction_mapping = new();
+            var instruction_mapping = new Dictionary<Instruction, SequencePoint>();
             if (!HasSequencePoints || !method.HasBody)
                 return instruction_mapping;
 
-            Dictionary<int, SequencePoint> offset_mapping = new(sequence_points.Count);
+            var offset_mapping = new Dictionary<int, SequencePoint>(sequence_points.Count);
 
             for (int i = 0; i < sequence_points.Count; i++)
             {
@@ -733,7 +732,7 @@ namespace MonoFN.Cecil.Cil
                     offset_mapping.Add(sequence_points[i].Offset, sequence_points[i]);
             }
 
-            Collection<Instruction> instructions = method.Body.Instructions;
+            var instructions = method.Body.Instructions;
 
             for (int i = 0; i < instructions.Count; i++)
             {
@@ -757,14 +756,14 @@ namespace MonoFN.Cecil.Cil
         {
             for (int i = 0; i < scopes.Count; i++)
             {
-                ScopeDebugInformation scope = scopes[i];
+                var scope = scopes[i];
 
                 yield return scope;
 
                 if (!scope.HasScopes)
                     continue;
 
-                foreach (ScopeDebugInformation sub_scope in GetScopes(scope.Scopes))
+                foreach (var sub_scope in GetScopes(scope.Scopes))
                     yield return sub_scope;
             }
         }
@@ -773,10 +772,10 @@ namespace MonoFN.Cecil.Cil
         {
             name = null;
 
-            bool has_name = false;
-            string unique_name = "";
+            var has_name = false;
+            var unique_name = "";
 
-            foreach (ScopeDebugInformation scope in GetScopes())
+            foreach (var scope in GetScopes())
             {
                 string slot_name;
                 if (!scope.TryGetName(variable, out slot_name))
@@ -850,13 +849,13 @@ namespace MonoFN.Cecil.Cil
 
             if (module.HasDebugHeader)
             {
-                ImageDebugHeader header = module.GetDebugHeader();
-                ImageDebugHeaderEntry entry = header.GetEmbeddedPortablePdbEntry();
+                var header = module.GetDebugHeader();
+                var entry = header.GetEmbeddedPortablePdbEntry();
                 if (entry != null)
                     return new EmbeddedPortablePdbReaderProvider().GetSymbolReader(module, fileName);
             }
 
-            string pdb_file_name = Mixin.GetPdbFileName(fileName);
+            var pdb_file_name = Mixin.GetPdbFileName(fileName);
 
             if (File.Exists(pdb_file_name))
             {
@@ -873,7 +872,7 @@ namespace MonoFN.Cecil.Cil
                 }
             }
 
-            string mdb_file_name = Mixin.GetMdbFileName(fileName);
+            var mdb_file_name = Mixin.GetMdbFileName(fileName);
             if (File.Exists(mdb_file_name))
             {
                 try
@@ -899,8 +898,8 @@ namespace MonoFN.Cecil.Cil
 
             if (module.HasDebugHeader)
             {
-                ImageDebugHeader header = module.GetDebugHeader();
-                ImageDebugHeaderEntry entry = header.GetEmbeddedPortablePdbEntry();
+                var header = module.GetDebugHeader();
+                var entry = header.GetEmbeddedPortablePdbEntry();
                 if (entry != null)
                     return new EmbeddedPortablePdbReaderProvider().GetSymbolReader(module, "");
             }
@@ -908,12 +907,12 @@ namespace MonoFN.Cecil.Cil
             Mixin.CheckStream(symbolStream);
             Mixin.CheckReadSeek(symbolStream);
 
-            long position = symbolStream.Position;
+            var position = symbolStream.Position;
 
             const int portablePdbHeader = 0x424a5342;
 
-            BinaryStreamReader reader = new(symbolStream);
-            int intHeader = reader.ReadInt32();
+            var reader = new BinaryStreamReader(symbolStream);
+            var intHeader = reader.ReadInt32();
             symbolStream.Position = position;
 
             if (intHeader == portablePdbHeader)
@@ -923,11 +922,11 @@ namespace MonoFN.Cecil.Cil
 
             const string nativePdbHeader = "Microsoft C/C++ MSF 7.00";
 
-            byte[] bytesHeader = reader.ReadBytes(nativePdbHeader.Length);
+            var bytesHeader = reader.ReadBytes(nativePdbHeader.Length);
             symbolStream.Position = position;
-            bool isNativePdb = true;
+            var isNativePdb = true;
 
-            for (int i = 0; i < bytesHeader.Length; i++)
+            for (var i = 0; i < bytesHeader.Length; i++)
             {
                 if (bytesHeader[i] != (byte)nativePdbHeader[i])
                 {
@@ -950,7 +949,7 @@ namespace MonoFN.Cecil.Cil
 
             const long mdbHeader = 0x45e82623fd7fa614;
 
-            long longHeader = reader.ReadInt64();
+            var longHeader = reader.ReadInt64();
             symbolStream.Position = position;
 
             if (longHeader == mdbHeader)
@@ -987,11 +986,11 @@ namespace MonoFN.Cecil.Cil
             if (kind == SymbolKind.PortablePdb)
                 throw new ArgumentException();
 
-            string suffix = GetSymbolNamespace(kind);
+            var suffix = GetSymbolNamespace(kind);
 
-            SR.AssemblyName cecil_name = typeof(SymbolProvider).Assembly.GetName();
+            var cecil_name = typeof(SymbolProvider).Assembly.GetName();
 
-            SR.AssemblyName name = new()
+            var name = new SR.AssemblyName
             {
                 Name = cecil_name.Name + "." + suffix,
                 Version = cecil_name.Version,
@@ -1009,11 +1008,11 @@ namespace MonoFN.Cecil.Cil
 
         private static Type GetSymbolType(SymbolKind kind, string fullname)
         {
-            Type type = Type.GetType(fullname);
+            var type = Type.GetType(fullname);
             if (type != null)
                 return type;
 
-            SR.AssemblyName assembly_name = GetSymbolAssemblyName(kind);
+            var assembly_name = GetSymbolAssemblyName(kind);
 
             type = Type.GetType(fullname + ", " + assembly_name.FullName);
             if (type != null)
@@ -1021,7 +1020,7 @@ namespace MonoFN.Cecil.Cil
 
             try
             {
-                SR.Assembly assembly = SR.Assembly.Load(assembly_name);
+                var assembly = SR.Assembly.Load(assembly_name);
                 if (assembly != null)
                     return assembly.GetType(fullname);
             }
@@ -1038,8 +1037,8 @@ namespace MonoFN.Cecil.Cil
             if (kind == SymbolKind.EmbeddedPortablePdb)
                 return new EmbeddedPortablePdbReaderProvider();
 
-            string provider_name = GetSymbolTypeName(kind, "ReaderProvider");
-            Type type = GetSymbolType(kind, provider_name);
+            var provider_name = GetSymbolTypeName(kind, "ReaderProvider");
+            var type = GetSymbolType(kind, provider_name);
             if (type == null)
                 throw new TypeLoadException("Could not find symbol provider type " + provider_name);
 
@@ -1081,7 +1080,7 @@ namespace MonoFN.Cecil.Cil
     {
         public ISymbolWriter GetSymbolWriter(ModuleDefinition module, string fileName)
         {
-            ISymbolReader reader = module.SymbolReader;
+            var reader = module.SymbolReader;
             if (reader == null)
                 throw new InvalidOperationException();
 
@@ -1114,11 +1113,11 @@ namespace MonoFN.Cecil
 
         public static ImageDebugHeader AddDeterministicEntry(this ImageDebugHeader header)
         {
-            ImageDebugHeaderEntry entry = new(new() { Type = ImageDebugType.Deterministic }, Empty<byte>.Array);
+            var entry = new ImageDebugHeaderEntry(new() { Type = ImageDebugType.Deterministic }, Empty<byte>.Array);
             if (header == null)
                 return new(entry);
 
-            ImageDebugHeaderEntry[] entries = new ImageDebugHeaderEntry [header.Entries.Length + 1];
+            var entries = new ImageDebugHeaderEntry [header.Entries.Length + 1];
             Array.Copy(header.Entries, entries, header.Entries.Length);
             entries[entries.Length - 1] = entry;
             return new(entries);
@@ -1134,9 +1133,9 @@ namespace MonoFN.Cecil
             if (!header.HasEntries)
                 return null;
 
-            for (int i = 0; i < header.Entries.Length; i++)
+            for (var i = 0; i < header.Entries.Length; i++)
             {
-                ImageDebugHeaderEntry entry = header.Entries[i];
+                var entry = header.Entries[i];
                 if (entry.Directory.Type == type)
                     return entry;
             }
@@ -1156,7 +1155,7 @@ namespace MonoFN.Cecil
 
         public static bool IsPortablePdb(string fileName)
         {
-            using (FileStream file = new(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var file = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
                 return IsPortablePdb(file);
             }
@@ -1168,10 +1167,10 @@ namespace MonoFN.Cecil
 
             if (stream.Length < 4)
                 return false;
-            long position = stream.Position;
+            var position = stream.Position;
             try
             {
-                BinaryReader reader = new(stream);
+                var reader = new BinaryReader(stream);
                 return reader.ReadUInt32() == ppdb_signature;
             }
             finally

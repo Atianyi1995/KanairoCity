@@ -94,7 +94,7 @@ namespace MonoFN.Cecil.Cil
 
         public override string ToString()
         {
-            StringBuilder instruction = new();
+            var instruction = new StringBuilder();
 
             AppendLabel(instruction, this);
             instruction.Append(':');
@@ -113,7 +113,7 @@ namespace MonoFN.Cecil.Cil
                     AppendLabel(instruction, (Instruction)operand);
                     break;
                 case OperandType.InlineSwitch:
-                    Instruction[] labels = (Instruction[])operand;
+                    var labels = (Instruction[])operand;
                     for (int i = 0; i < labels.Length; i++)
                     {
                         if (i > 0)

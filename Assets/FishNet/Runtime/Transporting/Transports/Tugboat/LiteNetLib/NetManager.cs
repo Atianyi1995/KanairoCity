@@ -356,7 +356,7 @@ namespace LiteNetLib
 
         private void DisconnectPeer(NetPeer peer, DisconnectReason reason, SocketError socketErrorCode, bool force, byte[] data, int start, int count, NetPacket eventData)
         {
-            ShutdownResult shutdownResult = peer.Shutdown(data, start, count, force);
+            var shutdownResult = peer.Shutdown(data, start, count, force);
             if (shutdownResult == ShutdownResult.None)
                 return;
             if (shutdownResult == ShutdownResult.WasConnected)
@@ -423,7 +423,7 @@ namespace LiteNetLib
                     _netEventListener.OnPeerConnected(evt.Peer);
                     break;
                 case NetEvent.EType.Disconnect:
-                    DisconnectInfo info = new()
+                    var info = new DisconnectInfo
                     {
                         Reason = evt.DisconnectReason,
                         AdditionalData = evt.DataReader,
@@ -494,8 +494,8 @@ namespace LiteNetLib
         // Update function
         private void UpdateLogic()
         {
-            List<NetPeer> peersToRemove = new();
-            Stopwatch stopwatch = new();
+            var peersToRemove = new List<NetPeer>();
+            var stopwatch = new Stopwatch();
             stopwatch.Start();
 
             while (IsRunning)
@@ -507,7 +507,7 @@ namespace LiteNetLib
                     elapsed = elapsed <= 0 ? 1 : elapsed;
                     stopwatch.Restart();
 
-                    for (NetPeer netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
+                    for (var netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
                     {
                         if (netPeer.ConnectionState == ConnectionState.Disconnected && netPeer.TimeSinceLastPacket > DisconnectTimeout)
                         {
@@ -553,12 +553,12 @@ namespace LiteNetLib
             if (!SimulateLatency)
                 return;
 
-            DateTime time = DateTime.UtcNow;
+            var time = DateTime.UtcNow;
             lock (_pingSimulationList)
             {
                 for (int i = 0; i < _pingSimulationList.Count; i++)
                 {
-                    IncomingData incomingData = _pingSimulationList[i];
+                    var incomingData = _pingSimulationList[i];
                     if (incomingData.TimeWhenGet <= time)
                     {
                         DebugMessageReceived(incomingData.Data, incomingData.EndPoint);
@@ -573,7 +573,7 @@ namespace LiteNetLib
         private void ProcessNtpRequests(int elapsedMilliseconds)
         {
             List<IPEndPoint> requestsToRemove = null;
-            foreach (KeyValuePair<IPEndPoint, NtpRequest> ntpRequest in _ntpRequests)
+            foreach (var ntpRequest in _ntpRequests)
             {
                 ntpRequest.Value.Send(_udpSocketv4, elapsedMilliseconds);
                 if (ntpRequest.Value.NeedToKill)
@@ -586,7 +586,7 @@ namespace LiteNetLib
 
             if (requestsToRemove != null)
             {
-                foreach (IPEndPoint ipEndPoint in requestsToRemove)
+                foreach (var ipEndPoint in requestsToRemove)
                 {
                     _ntpRequests.TryRemove(ipEndPoint, out _);
                 }
@@ -602,7 +602,7 @@ namespace LiteNetLib
             if (!_manualMode)
                 return;
 
-            for (NetPeer netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
+            for (var netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
             {
                 if (netPeer.ConnectionState == ConnectionState.Disconnected && netPeer.TimeSinceLastPacket > DisconnectTimeout)
                 {
@@ -625,7 +625,7 @@ namespace LiteNetLib
                 NetDebug.Write(NetLogLevel.Trace, "[NM] Peer connect reject force.");
                 if (rejectData != null && length > 0)
                 {
-                    NetPacket shutdownPacket = PoolGetWithProperty(PacketProperty.Disconnect, length);
+                    var shutdownPacket = PoolGetWithProperty(PacketProperty.Disconnect, length);
                     shutdownPacket.ConnectionNumber = request.InternalPacket.ConnectionNumber;
                     FastBitConverter.GetBytes(shutdownPacket.RawData, 1, request.InternalPacket.ConnectionTime);
                     if (shutdownPacket.Size >= NetConstants.PossibleMtu[0])
@@ -701,7 +701,7 @@ namespace LiteNetLib
             //if we have peer
             if (netPeer != null)
             {
-                ConnectRequestResult processResult = netPeer.ProcessConnectRequest(connRequest);
+                var processResult = netPeer.ProcessConnectRequest(connRequest);
                 NetDebug.Write($"ConnectRequest LastId: {netPeer.ConnectTime}, NewId: {connRequest.ConnectionTime}, EP: {remoteEndPoint}, Result: {processResult}");
 
                 switch (processResult)
@@ -789,14 +789,14 @@ namespace LiteNetLib
         private void DebugMessageReceived(NetPacket packet, IPEndPoint remoteEndPoint)
         {
 #endif
-            int originalPacketSize = packet.Size;
+            var originalPacketSize = packet.Size;
             if (EnableStatistics)
             {
                 Statistics.IncrementPacketsReceived();
                 Statistics.AddBytesReceived(originalPacketSize);
             }
 
-            if (_ntpRequests.Count > 0 && _ntpRequests.TryGetValue(remoteEndPoint, out NtpRequest request))
+            if (_ntpRequests.Count > 0 && _ntpRequests.TryGetValue(remoteEndPoint, out var request))
             {
                 if (packet.Size < 48)
                 {
@@ -878,7 +878,7 @@ namespace LiteNetLib
             switch (packet.Property)
             {
                 case PacketProperty.ConnectRequest:
-                    NetConnectRequestPacket connRequest = NetConnectRequestPacket.FromData(packet);
+                    var connRequest = NetConnectRequestPacket.FromData(packet);
                     if (connRequest != null)
                         ProcessConnectRequest(remoteEndPoint, netPeer, connRequest);
                     break;
@@ -909,11 +909,11 @@ namespace LiteNetLib
                         if (AllowPeerAddressChange)
                         {
                             NetDebug.Write($"[NM] Looks like address change: {packet.Size}");
-                            NetConnectAcceptPacket remoteData = NetConnectAcceptPacket.FromData(packet);
+                            var remoteData = NetConnectAcceptPacket.FromData(packet);
                             if (remoteData != null && remoteData.PeerNetworkChanged && remoteData.PeerId < _peersArray.Length)
                             {
                                 _peersLock.EnterUpgradeableReadLock();
-                                NetPeer peer = _peersArray[remoteData.PeerId];
+                                var peer = _peersArray[remoteData.PeerId];
                                 _peersLock.ExitUpgradeableReadLock();
                                 if (peer != null && peer.ConnectTime == remoteData.ConnectionTime && peer.ConnectionNum == remoteData.ConnectionNumber)
                                 {
@@ -933,7 +933,7 @@ namespace LiteNetLib
                         //else peer really not found
                         if (!isOldPeer)
                         {
-                            NetPacket secondResponse = PoolGetWithProperty(PacketProperty.PeerNotFound, 1);
+                            var secondResponse = PoolGetWithProperty(PacketProperty.PeerNotFound, 1);
                             secondResponse.RawData[1] = 1;
                             SendRawAndRecycle(secondResponse, remoteEndPoint);
                         }
@@ -946,7 +946,7 @@ namespace LiteNetLib
                 case PacketProperty.Disconnect:
                     if (peerFound)
                     {
-                        DisconnectResult disconnectResult = netPeer.ProcessDisconnect(packet);
+                        var disconnectResult = netPeer.ProcessDisconnect(packet);
                         if (disconnectResult == DisconnectResult.None)
                         {
                             PoolRecycle(packet);
@@ -964,7 +964,7 @@ namespace LiteNetLib
                 case PacketProperty.ConnectAccept:
                     if (!peerFound)
                         return;
-                    NetConnectAcceptPacket connAccept = NetConnectAcceptPacket.FromData(packet);
+                    var connAccept = NetConnectAcceptPacket.FromData(packet);
                     if (connAccept != null && netPeer.ProcessConnectAccept(connAccept))
                         CreateEvent(NetEvent.EType.Connect, netPeer);
                     break;
@@ -1092,7 +1092,7 @@ namespace LiteNetLib
             try
             {
                 _peersLock.EnterReadLock();
-                for (NetPeer netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
+                for (var netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
                     netPeer.Send(data, start, length, channelNumber, options);
             }
             finally
@@ -1174,7 +1174,7 @@ namespace LiteNetLib
             try
             {
                 _peersLock.EnterReadLock();
-                for (NetPeer netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
+                for (var netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
                 {
                     if (netPeer != excludePeer)
                         netPeer.Send(data, start, length, channelNumber, options);
@@ -1220,7 +1220,7 @@ namespace LiteNetLib
             try
             {
                 _peersLock.EnterReadLock();
-                for (NetPeer netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
+                for (var netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
                 {
                     if (netPeer != excludePeer)
                         netPeer.Send(data, channelNumber, options);
@@ -1241,7 +1241,7 @@ namespace LiteNetLib
         public bool SendUnconnectedMessage(ReadOnlySpan<byte> message, IPEndPoint remoteEndPoint)
         {
             int headerSize = NetPacket.GetHeaderSize(PacketProperty.UnconnectedMessage);
-            NetPacket packet = PoolGetPacket(message.Length + headerSize);
+            var packet = PoolGetPacket(message.Length + headerSize);
             packet.Property = PacketProperty.UnconnectedMessage;
             message.CopyTo(new(packet.RawData, headerSize, message.Length));
             return SendRawAndRecycle(packet, remoteEndPoint) > 0;
@@ -1422,7 +1422,7 @@ namespace LiteNetLib
             int counter = 0;
             while (pendingEvent != null)
             {
-                NetEvent next = pendingEvent.Next;
+                var next = pendingEvent.Next;
                 ProcessEvent(pendingEvent);
                 pendingEvent = next;
                 counter++;
@@ -1497,7 +1497,7 @@ namespace LiteNetLib
                     return null;
 
                 byte connectionNumber = 0;
-                if (TryGetPeer(target, out NetPeer peer))
+                if (TryGetPeer(target, out var peer))
                 {
                     switch (peer.ConnectionState)
                     {
@@ -1546,7 +1546,7 @@ namespace LiteNetLib
 #endif
 
             //Send last disconnect
-            for (NetPeer netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
+            for (var netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
                 netPeer.Shutdown(null, 0, 0, !sendDisconnectMessages);
 
             //Stop
@@ -1582,7 +1582,7 @@ namespace LiteNetLib
         {
             int count = 0;
             _peersLock.EnterReadLock();
-            for (NetPeer netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
+            for (var netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
             {
                 if ((netPeer.ConnectionState & peerState) != 0)
                     count++;
@@ -1600,7 +1600,7 @@ namespace LiteNetLib
         {
             peers.Clear();
             _peersLock.EnterReadLock();
-            for (NetPeer netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
+            for (var netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
             {
                 if ((netPeer.ConnectionState & peerState) != 0)
                     peers.Add(netPeer);
@@ -1626,7 +1626,7 @@ namespace LiteNetLib
         {
             //Send disconnect packets
             _peersLock.EnterReadLock();
-            for (NetPeer netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
+            for (var netPeer = _headPeer; netPeer != null; netPeer = netPeer.NextPeer)
             {
                 DisconnectPeer(netPeer, DisconnectReason.DisconnectPeerCalled, 0, false, data, start, count, null);
             }

@@ -18,49 +18,40 @@ namespace FishNet.Managing.Statistic
         [Tooltip("Statistics for NetworkTraffic.")]
         [SerializeField]
         private NetworkTrafficStatistics _networkTraffic;
-        /// <summary>
-        /// NetworkManager this is for.
-        /// </summary>
-        private NetworkManager _networkManager;
 
         internal void InitializeOnce_Internal(NetworkManager manager)
         {
-            _networkManager = manager;
-        }
-
-        /// <summary>
-        /// Gets NetworkTrafficStatistics reference.
-        /// </summary>
-        public bool TryGetNetworkTrafficStatistics(out NetworkTrafficStatistics statistics)
-        {
-            statistics = null;
-
-            /* Cannot run in the current build type. */
-            #if (!UNITY_EDITOR && !DEVELOPMENT_BUILD) || UNITY_SERVER
+#if (!UNITY_EDITOR && !DEVELOPMENT_BUILD) || UNITY_SERVER
             if (!_runInRelease)
             {
                 _networkTraffic = null;
-                return false;
+                return;
             }
-            #endif
+#endif
+            InstantiateNetworkTrafficIfNeeded();
 
-            //NetworkManager must be set to work.            
-            if (_networkManager == null)
-            {
-                if (!TryGetComponent(out _networkManager))
-                    return false;
-            }
+            _networkTraffic.InitializeOnce_Internal(manager);
+        }
 
-            //Hot-load if needed.
-            if (_networkTraffic == null)
-                _networkTraffic = new();
-
-            _networkTraffic.InitializeOnce_Internal(_networkManager);
+        public bool TryGetNetworkTrafficStatistics(out NetworkTrafficStatistics statistics)
+        {
+            InstantiateNetworkTrafficIfNeeded();
 
             if (_networkTraffic.IsEnabled())
                 statistics = _networkTraffic;
-            
+            else
+                statistics = null;
+
             return statistics != null;
+        }
+
+        /// <summary>
+        /// Instantiates NetworkTraffic if currently null.
+        /// </summary>
+        private void InstantiateNetworkTrafficIfNeeded()
+        {
+            if (_networkTraffic == null)
+                _networkTraffic = new();
         }
     }
 }

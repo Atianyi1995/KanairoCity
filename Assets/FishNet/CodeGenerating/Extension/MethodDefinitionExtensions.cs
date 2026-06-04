@@ -111,9 +111,18 @@ namespace FishNet.CodeGenerating.Extension
 
             foreach (ParameterDefinition pd in otherMd.Parameters)
             {
+                session.ImportReference(pd.ParameterType.CachedResolve(session));
                 int currentCount = thisMd.Parameters.Count;
                 string name = pd.Name + currentCount;
-                ParameterDefinition parameterDef = pd.CloneImported(session, thisMd, name);
+                ParameterDefinition parameterDef = new(name, pd.Attributes, pd.ParameterType);
+                // Set any default values.
+                parameterDef.Constant = pd.Constant;
+                parameterDef.IsReturnValue = pd.IsReturnValue;
+                parameterDef.IsOut = pd.IsOut;
+                foreach (CustomAttribute item in pd.CustomAttributes)
+                    parameterDef.CustomAttributes.Add(item);
+                parameterDef.HasConstant = pd.HasConstant;
+                parameterDef.HasDefault = pd.HasDefault;
 
                 if (parameterDef == null || thisMd.Parameters == null)
                 {
@@ -147,14 +156,17 @@ namespace FishNet.CodeGenerating.Extension
                     DeclaringType = git,
                     CallingConvention = md.CallingConvention
                 };
-
                 foreach (ParameterDefinition pd in md.Parameters)
-                    result.Parameters.Add(pd.CloneImported(session, result));
-
+                {
+                    session.ImportReference(pd.ParameterType);
+                    result.Parameters.Add(pd);
+                }
                 return result;
             }
-
-            return methodRef;
+            else
+            {
+                return methodRef;
+            }
         }
 
         /// <summary>
@@ -194,13 +206,13 @@ namespace FishNet.CodeGenerating.Extension
 
         public static MethodDefinition CreateCopy(this MethodDefinition copiedMd, CodegenSession session, string nameOverride = null, MethodAttributes? attributesOverride = null)
         {
-            TypeReference returnType = session.ImportReference(copiedMd.ReturnType);
+            session.ImportReference(copiedMd.ReturnType);
 
             MethodAttributes attr = attributesOverride.HasValue ? attributesOverride.Value : copiedMd.Attributes;
             string name = nameOverride == null ? copiedMd.Name : nameOverride;
-            MethodDefinition result = new(name, attr, returnType);
+            MethodDefinition result = new(name, attr, copiedMd.ReturnType);
             foreach (GenericParameter item in copiedMd.GenericParameters)
-                result.GenericParameters.Add(new(item.Name, result) { Attributes = item.Attributes });
+                result.GenericParameters.Add(item);
 
             result.CreateParameters(session, copiedMd);
             return result;

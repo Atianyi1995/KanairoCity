@@ -543,7 +543,7 @@ namespace MonoFN.Cecil
         {
             Mixin.CheckFullName(fullName);
 
-            int position = fullName.IndexOf('/');
+            var position = fullName.IndexOf('/');
             if (position > 0)
                 return GetNestedType(fullName);
 
@@ -566,29 +566,29 @@ namespace MonoFN.Cecil
         {
             for (int i = 0; i < types.Count; i++)
             {
-                TypeDefinition type = types[i];
+                var type = types[i];
 
                 yield return type;
 
                 if (!type.HasNestedTypes)
                     continue;
 
-                foreach (TypeDefinition nested in GetTypes(type.NestedTypes))
+                foreach (var nested in GetTypes(type.NestedTypes))
                     yield return nested;
             }
         }
 
         private TypeDefinition GetNestedType(string fullname)
         {
-            string[] names = fullname.Split('/');
-            TypeDefinition type = GetType(names[0]);
+            var names = fullname.Split('/');
+            var type = GetType(names[0]);
 
             if (type == null)
                 return null;
 
             for (int i = 1; i < names.Length; i++)
             {
-                TypeDefinition nested_type = type.GetNestedType(names[i]);
+                var nested_type = type.GetNestedType(names[i]);
                 if (nested_type == null)
                     return null;
 
@@ -799,7 +799,7 @@ namespace MonoFN.Cecil
             if (!HasImage)
                 return;
             ReadingMode = ReadingMode.Immediate;
-            ImmediateModuleReader moduleReader = new(Image);
+            var moduleReader = new ImmediateModuleReader(Image);
             moduleReader.ReadModule(this, resolve_attributes: true);
         }
 
@@ -809,8 +809,8 @@ namespace MonoFN.Cecil
         {
             lock (SyncRoot)
             {
-                int position = reader.position;
-                IGenericContext context = reader.context;
+                var position = reader.position;
+                var context = reader.context;
 
                 read(item, reader);
 
@@ -823,10 +823,10 @@ namespace MonoFN.Cecil
         {
             lock (SyncRoot)
             {
-                int position = reader.position;
-                IGenericContext context = reader.context;
+                var position = reader.position;
+                var context = reader.context;
 
-                TRet ret = read(item, reader);
+                var ret = read(item, reader);
 
                 reader.position = position;
                 reader.context = context;
@@ -842,10 +842,10 @@ namespace MonoFN.Cecil
                 if (variable != null)
                     return variable;
 
-                int position = reader.position;
-                IGenericContext context = reader.context;
+                var position = reader.position;
+                var context = reader.context;
 
-                TRet ret = read(item, reader);
+                var ret = read(item, reader);
 
                 reader.position = position;
                 reader.context = context;
@@ -874,7 +874,7 @@ namespace MonoFN.Cecil
             Mixin.CheckName(name);
             Mixin.CheckParameters(parameters);
 
-            ModuleDefinition module = new()
+            var module = new ModuleDefinition
             {
                 Name = name,
                 kind = parameters.Kind,
@@ -900,7 +900,7 @@ namespace MonoFN.Cecil
 
             if (parameters.Kind != ModuleKind.NetModule)
             {
-                AssemblyDefinition assembly = new();
+                var assembly = new AssemblyDefinition();
                 module.assembly = assembly;
                 module.assembly.Name = CreateAssemblyName(name);
                 assembly.main_module = module;
@@ -924,7 +924,7 @@ namespace MonoFN.Cecil
             if (string.IsNullOrEmpty(FileName))
                 throw new InvalidOperationException();
 
-            DefaultSymbolReaderProvider provider = new(throwIfNoSymbol: true);
+            var provider = new DefaultSymbolReaderProvider(throwIfNoSymbol: true);
             ReadSymbols(provider.GetSymbolReader(this, FileName), throwIfSymbolsAreNotMaching: true);
         }
 
@@ -952,7 +952,7 @@ namespace MonoFN.Cecil
 
             if (HasImage && ReadingMode == ReadingMode.Immediate)
             {
-                ImmediateModuleReader immediate_reader = new(Image);
+                var immediate_reader = new ImmediateModuleReader(Image);
                 immediate_reader.ReadSymbols(this);
             }
         }
@@ -964,11 +964,11 @@ namespace MonoFN.Cecil
 
         public static ModuleDefinition ReadModule(string fileName, ReaderParameters parameters)
         {
-            Stream stream = GetFileStream(fileName, FileMode.Open, parameters.ReadWrite ? FileAccess.ReadWrite : FileAccess.Read, FileShare.Read);
+            var stream = GetFileStream(fileName, FileMode.Open, parameters.ReadWrite ? FileAccess.ReadWrite : FileAccess.Read, FileShare.Read);
 
             if (parameters.InMemory)
             {
-                MemoryStream memory = new(stream.CanSeek ? (int)stream.Length : 0);
+                var memory = new MemoryStream(stream.CanSeek ? (int)stream.Length : 0);
                 using (stream)
                 {
                     stream.CopyTo(memory);
@@ -1024,7 +1024,7 @@ namespace MonoFN.Cecil
         public void Write(string fileName, WriterParameters parameters)
         {
             Mixin.CheckParameters(parameters);
-            Stream file = GetFileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.Read);
+            var file = GetFileStream(fileName, FileMode.Create, FileAccess.ReadWrite, FileShare.Read);
             ModuleWriter.WriteModule(this, Disposable.Owned(file), parameters);
         }
 
@@ -1163,7 +1163,7 @@ namespace MonoFN.Cecil
 
         public static string GetFileName(this Stream self)
         {
-            FileStream file_stream = self as FileStream;
+            var file_stream = self as FileStream;
             if (file_stream == null)
                 return string.Empty;
 
@@ -1211,8 +1211,8 @@ namespace MonoFN.Cecil
         public static byte[] ReadAll(this Stream self)
         {
             int read;
-            MemoryStream memory = new((int)self.Length);
-            byte[] buffer = new byte [1024];
+            var memory = new MemoryStream((int)self.Length);
+            var buffer = new byte [1024];
 
             while ((read = self.Read(buffer, 0, buffer.Length)) != 0)
                 memory.Write(buffer, 0, read);

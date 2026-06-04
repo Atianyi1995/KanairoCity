@@ -56,7 +56,7 @@ namespace MonoFN.Cecil
 
         protected override void OnClear()
         {
-            foreach (TypeDefinition type in this)
+            foreach (var type in this)
                 Detach(type);
         }
 

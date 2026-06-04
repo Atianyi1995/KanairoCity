@@ -1,4 +1,4 @@
-﻿#if UNITY_EDITOR && !THREADED_TICKSMOOTHERS
+﻿#if UNITY_EDITOR
 using FishNet.Object;
 using GameKit.Dependencies.Utilities;
 using UnityEditor;

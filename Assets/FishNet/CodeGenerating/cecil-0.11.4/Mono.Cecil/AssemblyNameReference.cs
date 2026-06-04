@@ -95,9 +95,9 @@ namespace MonoFN.Cecil
             {
                 if (public_key_token == null && !public_key.IsNullOrEmpty())
                 {
-                    byte[] hash = HashPublicKey();
+                    var hash = HashPublicKey();
                     // we need the last 8 bytes in reverse order
-                    byte[] local_public_key_token = new byte [8];
+                    var local_public_key_token = new byte [8];
                     Array.Copy(hash, hash.Length - 8, local_public_key_token, 0, 8);
                     Array.Reverse(local_public_key_token, 0, 8);
                     Interlocked.CompareExchange(ref public_key_token, local_public_key_token, null); // publish only once finished (required for thread-safety)
@@ -145,7 +145,7 @@ namespace MonoFN.Cecil
 
                 const string sep = ", ";
 
-                StringBuilder builder = new();
+                var builder = new StringBuilder();
                 builder.Append(name);
                 builder.Append(sep);
                 builder.Append("Version=");
@@ -156,7 +156,7 @@ namespace MonoFN.Cecil
                 builder.Append(sep);
                 builder.Append("PublicKeyToken=");
 
-                byte[] pk_token = PublicKeyToken;
+                var pk_token = PublicKeyToken;
                 if (!pk_token.IsNullOrEmpty() && pk_token.Length > 0)
                 {
                     for (int i = 0; i < pk_token.Length; i++)
@@ -188,11 +188,11 @@ namespace MonoFN.Cecil
             if (fullName.Length == 0)
                 throw new ArgumentException("Name can not be empty");
 
-            AssemblyNameReference name = new();
-            string[] tokens = fullName.Split(',');
+            var name = new AssemblyNameReference();
+            var tokens = fullName.Split(',');
             for (int i = 0; i < tokens.Length; i++)
             {
-                string token = tokens[i].Trim();
+                var token = tokens[i].Trim();
 
                 if (i == 0)
                 {
@@ -200,7 +200,7 @@ namespace MonoFN.Cecil
                     continue;
                 }
 
-                string[] parts = token.Split('=');
+                var parts = token.Split('=');
                 if (parts.Length != 2)
                     throw new ArgumentException("Malformed name");
 
@@ -213,7 +213,7 @@ namespace MonoFN.Cecil
                         name.Culture = parts[1] == "neutral" ? "" : parts[1];
                         break;
                     case "publickeytoken":
-                        string pk_token = parts[1];
+                        var pk_token = parts[1];
                         if (pk_token == "null")
                             break;
 

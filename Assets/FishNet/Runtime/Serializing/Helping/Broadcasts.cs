@@ -13,7 +13,7 @@ namespace FishNet.Broadcast.Helping
         /// <summary>
         /// Writes a broadcast to writer.
         /// </summary>
-        internal static PooledWriter WriteBroadcast<T>(PooledWriter writer, T message)
+        internal static PooledWriter WriteBroadcast<T>(NetworkManager networkManager, PooledWriter writer, T message, ref Channel channel)
         {
             writer.WritePacketIdUnpacked(PacketId.Broadcast);
             writer.WriteUInt16(typeof(T).FullName.GetStableHashU16());
@@ -24,6 +24,8 @@ namespace FishNet.Broadcast.Helping
             writer.WriteInt32(dataWriter.Length);
             // Write data.
             writer.WriteArraySegment(dataWriter.GetArraySegment());
+            // Update channel to reliable if needed.
+            networkManager.TransportManager.CheckSetReliableChannel(writer.Length, ref channel);
 
             dataWriter.Store();
 

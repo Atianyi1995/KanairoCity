@@ -42,17 +42,17 @@ namespace FishNet.Serializing
     {
         public quaternion Readquaternion()
         {
-            return new(Readfloat4());
+            return new quaternion(Readfloat4());
         }
 
         public Random Readrandom()
         {
-            return new() { state = ReadUInt32() };
+            return new Random() { state = ReadUInt32() };
         }
 
         public RigidTransform ReadRigidTransform()
         {
-            return new()
+            return new RigidTransform()
             {
                 rot = Readquaternion(),
                 pos = Readfloat3(),
@@ -62,7 +62,7 @@ namespace FishNet.Serializing
 #if UNITYMATHEMATICS_131
         public AffineTransform ReadAffineTransform()
         {
-            return new()
+            return new AffineTransform()
             {
                 rs = Readfloat3x3(),
                 t = Readfloat3(),
@@ -72,7 +72,7 @@ namespace FishNet.Serializing
 #if UNITYMATHEMATICS_132
         public MinMaxAABB ReadMinMaxAABB()
         {
-            return new()
+            return new MinMaxAABB()
             {
                 Min = Readfloat3(),
                 Max = Readfloat3()

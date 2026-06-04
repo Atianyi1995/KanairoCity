@@ -24,7 +24,7 @@ namespace MonoFN.Cecil.Cil
             Mixin.CheckModule(module);
             Mixin.CheckFileName(fileName);
 
-            FileStream file = File.OpenRead(Mixin.GetPdbFileName(fileName));
+            var file = File.OpenRead(Mixin.GetPdbFileName(fileName));
             return GetSymbolReader(module, Disposable.Owned(file as Stream), file.Name);
         }
 
@@ -71,7 +71,7 @@ namespace MonoFN.Cecil.Cil
             if (image == module.Image)
                 return true;
 
-            foreach (ImageDebugHeaderEntry entry in header.Entries)
+            foreach (var entry in header.Entries)
             {
                 if (!IsMatchingEntry(image.PdbHeap, entry))
                     continue;
@@ -88,23 +88,23 @@ namespace MonoFN.Cecil.Cil
             if (entry.Directory.Type != ImageDebugType.CodeView)
                 return false;
 
-            byte[] data = entry.Data;
+            var data = entry.Data;
 
             if (data.Length < 24)
                 return false;
 
-            int magic = ReadInt32(data, 0);
+            var magic = ReadInt32(data, 0);
             if (magic != 0x53445352)
                 return false;
 
-            byte[] buffer = new byte [16];
+            var buffer = new byte [16];
             Buffer.BlockCopy(data, 4, buffer, 0, 16);
 
-            Guid module_guid = new(buffer);
+            var module_guid = new Guid(buffer);
 
             Buffer.BlockCopy(heap.Id, 0, buffer, 0, 16);
 
-            Guid pdb_guid = new(buffer);
+            var pdb_guid = new Guid(buffer);
 
             return module_guid == pdb_guid;
         }
@@ -121,7 +121,7 @@ namespace MonoFN.Cecil.Cil
 
         public MethodDebugInformation Read(MethodDefinition method)
         {
-            MethodDebugInformation info = new(method);
+            var info = new MethodDebugInformation(method);
             ReadSequencePoints(info);
             ReadScope(info);
             ReadStateMachineKickOffMethod(info);
@@ -164,8 +164,8 @@ namespace MonoFN.Cecil.Cil
         {
             Mixin.CheckModule(module);
 
-            ImageDebugHeader header = module.GetDebugHeader();
-            ImageDebugHeaderEntry entry = header.GetEmbeddedPortablePdbEntry();
+            var header = module.GetDebugHeader();
+            var entry = header.GetEmbeddedPortablePdbEntry();
             if (entry == null)
                 throw new InvalidOperationException();
 
@@ -174,13 +174,13 @@ namespace MonoFN.Cecil.Cil
 
         private static Stream GetPortablePdbStream(ImageDebugHeaderEntry entry)
         {
-            MemoryStream compressed_stream = new(entry.Data);
-            BinaryStreamReader reader = new(compressed_stream);
+            var compressed_stream = new MemoryStream(entry.Data);
+            var reader = new BinaryStreamReader(compressed_stream);
             reader.ReadInt32(); // signature
-            int length = reader.ReadInt32();
-            MemoryStream decompressed_stream = new(length);
+            var length = reader.ReadInt32();
+            var decompressed_stream = new MemoryStream(length);
 
-            using (DeflateStream deflate_stream = new(compressed_stream, CompressionMode.Decompress, leaveOpen: true))
+            using (var deflate_stream = new DeflateStream(compressed_stream, CompressionMode.Decompress, leaveOpen: true))
             {
                 deflate_stream.CopyTo(decompressed_stream);
             }
@@ -234,7 +234,7 @@ namespace MonoFN.Cecil.Cil
             Mixin.CheckModule(module);
             Mixin.CheckFileName(fileName);
 
-            FileStream file = File.OpenWrite(Mixin.GetPdbFileName(fileName));
+            var file = File.OpenWrite(Mixin.GetPdbFileName(fileName));
             return GetSymbolWriter(module, Disposable.Owned(file as Stream));
         }
 
@@ -248,8 +248,8 @@ namespace MonoFN.Cecil.Cil
 
         private ISymbolWriter GetSymbolWriter(ModuleDefinition module, Disposable<Stream> stream)
         {
-            MetadataBuilder metadata = new(module, this);
-            ImageWriter writer = ImageWriter.CreateDebugWriter(module, metadata, stream);
+            var metadata = new MetadataBuilder(module, this);
+            var writer = ImageWriter.CreateDebugWriter(module, metadata, stream);
 
             return new PortablePdbWriter(metadata, module, writer);
         }
@@ -294,7 +294,7 @@ namespace MonoFN.Cecil.Cil
             if (IsEmbedded)
                 return new();
 
-            ImageDebugDirectory directory = new()
+            var directory = new ImageDebugDirectory()
             {
                 MajorVersion = 256,
                 MinorVersion = 20557,
@@ -302,7 +302,7 @@ namespace MonoFN.Cecil.Cil
                 TimeDateStamp = (int)module.timestamp
             };
 
-            ByteBuffer buffer = new();
+            var buffer = new ByteBuffer();
             // RSDS
             buffer.WriteUInt32(0x53445352);
             // Module ID
@@ -310,7 +310,7 @@ namespace MonoFN.Cecil.Cil
             // PDB Age
             buffer.WriteUInt32(1);
             // PDB Path
-            string fileName = writer.BaseStream.GetFileName();
+            var fileName = writer.BaseStream.GetFileName();
             if (string.IsNullOrEmpty(fileName))
             {
                 fileName = module.Assembly.Name.Name + ".pdb";
@@ -318,7 +318,7 @@ namespace MonoFN.Cecil.Cil
             buffer.WriteBytes(System.Text.Encoding.UTF8.GetBytes(fileName));
             buffer.WriteByte(0);
 
-            byte[] data = new byte [buffer.length];
+            var data = new byte [buffer.length];
             Buffer.BlockCopy(buffer.buffer, 0, data, 0, buffer.length);
             directory.SizeOfData = data.Length;
 
@@ -334,7 +334,7 @@ namespace MonoFN.Cecil.Cil
 
         private void CheckMethodDebugInformationTable()
         {
-            MethodDebugInformationTable mdi = pdb_metadata.table_heap.GetTable<MethodDebugInformationTable>(Table.MethodDebugInformation);
+            var mdi = pdb_metadata.table_heap.GetTable<MethodDebugInformationTable>(Table.MethodDebugInformation);
             if (mdi.length > 0)
                 return;
 
@@ -367,15 +367,15 @@ namespace MonoFN.Cecil.Cil
 
         private void WritePdbHeap()
         {
-            PdbHeapBuffer pdb_heap = pdb_metadata.pdb_heap;
+            var pdb_heap = pdb_metadata.pdb_heap;
 
             pdb_heap.WriteBytes(module.Mvid.ToByteArray());
             pdb_heap.WriteUInt32(module_metadata.timestamp);
 
             pdb_heap.WriteUInt32(module_metadata.entry_point.ToUInt32());
 
-            TableHeapBuffer table_heap = module_metadata.table_heap;
-            MetadataTable[] tables = table_heap.tables;
+            var table_heap = module_metadata.table_heap;
+            var tables = table_heap.tables;
 
             ulong valid = 0;
             for (int i = 0; i < tables.Length; i++)
@@ -412,8 +412,8 @@ namespace MonoFN.Cecil.Cil
             Mixin.CheckModule(module);
             Mixin.CheckFileName(fileName);
 
-            MemoryStream stream = new();
-            PortablePdbWriter pdb_writer = (PortablePdbWriter)new PortablePdbWriterProvider().GetSymbolWriter(module, stream);
+            var stream = new MemoryStream();
+            var pdb_writer = (PortablePdbWriter)new PortablePdbWriterProvider().GetSymbolWriter(module, stream);
             return new EmbeddedPortablePdbWriter(stream, pdb_writer);
         }
 
@@ -443,16 +443,16 @@ namespace MonoFN.Cecil.Cil
         {
             writer.Dispose();
 
-            ImageDebugDirectory directory = new()
+            var directory = new ImageDebugDirectory
             {
                 Type = ImageDebugType.EmbeddedPortablePdb,
                 MajorVersion = 0x0100,
                 MinorVersion = 0x0100
             };
 
-            MemoryStream data = new();
+            var data = new MemoryStream();
 
-            BinaryStreamWriter w = new(data);
+            var w = new BinaryStreamWriter(data);
             w.WriteByte(0x4d);
             w.WriteByte(0x50);
             w.WriteByte(0x44);
@@ -462,7 +462,7 @@ namespace MonoFN.Cecil.Cil
 
             stream.Position = 0;
 
-            using (DeflateStream compress_stream = new(data, CompressionMode.Compress, leaveOpen: true))
+            using (var compress_stream = new DeflateStream(data, CompressionMode.Compress, leaveOpen: true))
             {
                 stream.CopyTo(compress_stream);
             }

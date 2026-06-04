@@ -186,7 +186,7 @@ namespace LiteNetLib
                         if (relate >= _windowSize)
                             break;
 
-                        NetPacket netPacket = OutgoingQueue.Dequeue();
+                        var netPacket = OutgoingQueue.Dequeue();
                         netPacket.Sequence = (ushort)_localSeqence;
                         netPacket.ChannelId = _id;
                         _pendingPackets[_localSeqence % _windowSize].Init(netPacket);

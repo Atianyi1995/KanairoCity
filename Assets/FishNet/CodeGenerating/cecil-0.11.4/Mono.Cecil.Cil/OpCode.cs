@@ -167,7 +167,7 @@ namespace MonoFN.Cecil.Cil
             if (!(obj is OpCode))
                 return false;
 
-            OpCode opcode = (OpCode)obj;
+            var opcode = (OpCode)obj;
             return Op1 == opcode.Op1 && Op2 == opcode.Op2;
         }
 
@@ -198,7 +198,7 @@ namespace MonoFN.Cecil.Cil
 
         static OpCodeNames()
         {
-            byte[] table = new byte[]
+            var table = new byte[]
             {
                 3, 110, 111, 112,
                 5, 98, 114, 101, 97, 107,
@@ -425,7 +425,7 @@ namespace MonoFN.Cecil.Cil
 
             for (int i = 0, p = 0; i < names.Length; i++)
             {
-                char[] buffer = new char [table[p++]];
+                var buffer = new char [table[p++]];
 
                 for (int j = 0; j < buffer.Length; j++)
                     buffer[j] = (char)table[p++];

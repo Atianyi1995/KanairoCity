@@ -49,7 +49,7 @@ namespace FishNet.CodeGenerating.Helping
             // WriterPool.GetWriter
             Type writerPoolType = typeof(WriterPool);
             ImportReference(writerPoolType);
-            foreach (MethodInfo methodInfo in writerPoolType.GetMethods())
+            foreach (var methodInfo in writerPoolType.GetMethods())
             {
                 if (methodInfo.Name == nameof(WriterPool.Retrieve))
                 {

@@ -101,7 +101,7 @@ namespace FishNet.Authenticating
         /// <summary>
         /// Sets a host hash of length.
         /// </summary>
-        /// https://stackoverflow.com/questions/32932679/using-rngcryptoserviceprovider-to-generate-random-string
+        /// https:// stackoverflow.com/questions/32932679/using-rngcryptoserviceprovider-to-generate-random-string
         private void SetHostHash(int length)
         {
             if (length <= 0)
@@ -128,19 +128,16 @@ namespace FishNet.Authenticating
         }
 
         /// <summary>
-        /// Returns true if authentication was sent as the clientHost.
+        /// Returns true if authentication was sent as host.
         /// </summary>
-        /// <remarks>This should only be called from the client side when receiving an authentication request.</remarks>
-        protected bool TryAuthenticateAsClientHost()
+        /// <returns></returns>
+        protected bool AuthenticateAsHost()
         {
             if (!_allowHostAuthentication)
                 return false;
-            /* Host hash would only exist if also
-             * the server. */
             if (_hostHash == string.Empty)
                 return false;
 
-            /* Send the password as it is only on the host. */
             HostPasswordBroadcast hpb = new()
             {
                 Password = _hostHash

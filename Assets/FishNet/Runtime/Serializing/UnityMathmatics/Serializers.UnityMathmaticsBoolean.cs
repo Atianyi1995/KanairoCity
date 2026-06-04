@@ -288,14 +288,14 @@ namespace FishNet.Serializing
         {
             byte b = ReadUInt8Unpacked();
 
-            return new() { x = (b & 1) != 0, y = (b & 2) != 0 };
+            return new bool2() { x = (b & 1) != 0, y = (b & 2) != 0 };
         }
 
         public bool3 Readbool3()
         {
             byte b = ReadUInt8Unpacked();
 
-            return new()
+            return new bool3()
             {
                 x = (b & 1) != 0,
                 y = (b & 2) != 0,
@@ -307,7 +307,7 @@ namespace FishNet.Serializing
         {
             byte b = ReadUInt8Unpacked();
 
-            return new()
+            return new bool4
             {
                 x = (b & 1) != 0,
                 y = (b & 2) != 0,

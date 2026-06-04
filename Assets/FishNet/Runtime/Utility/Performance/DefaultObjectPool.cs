@@ -157,11 +157,6 @@ namespace FishNet.Utility.Performance
                 Destroy(instantiated.gameObject);
                 return;
             }
-            
-            /* This call occurs here rather than in the object pool
-             * to protect the user should they be using a
-             * custom pool. */
-            SetTransformToSerializedValues(instantiated);
 
             // Get all children as well and reset state on them.
             List<NetworkObject> nestedNobs = instantiated.GetNetworkObjects(GetNetworkObjectOption.All);
@@ -205,7 +200,7 @@ namespace FishNet.Utility.Performance
                 return null;
             if (prefab.PrefabId == NetworkObject.UNSET_PREFABID_VALUE)
             {
-                NetworkManager.LogError($"Pefab {prefab.name} has an invalid prefabId and cannot be cached.");
+                NetworkManagerExtensions.LogError($"Pefab {prefab.name} has an invalid prefabId and cannot be cached.");
                 return null;
             }
 

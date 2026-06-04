@@ -52,13 +52,12 @@ namespace FishNet.Object
 
         #region Internal.
         /// <summary>
-        /// NetworkId for this scene object.
+        /// Network Id for this scene object.
         /// </summary>
         [field: SerializeField]
         [field: HideInInspector]
-        internal ulong SceneId;
+        internal ulong SceneId { get; private set; }
         /// <summary>
-        /// Local properties of the transform during serialization.
         /// </summary>
         [SerializeField]
         [HideInInspector]
@@ -81,14 +80,14 @@ namespace FishNet.Object
         {
             if (!Application.isPlaying)
             {
-                NetworkManager.LogError($"ClearRuntimeSceneObject may only be called at runtime.");
+                NetworkManagerExtensions.LogError($"ClearRuntimeSceneObject may only be called at runtime.");
                 return;
             }
 
             SceneId = UNSET_SCENEID_VALUE;
         }
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         private void OnApplicationQuit()
         {
             _lastSceneIdAutomaticRebuildTime = 0;
@@ -206,20 +205,26 @@ namespace FishNet.Object
 
         private bool IsEditingInPrefabMode()
         {
-            // if the game object is stored on disk, it is a prefab of some kind, despite not returning true for IsPartOfPrefabAsset =/
             if (EditorUtility.IsPersistent(this))
-                return true;
-
-            // If the GameObject is not persistent let's determine which stage we are in first because getting Prefab info depends on it
-            StageHandle mainStage = StageUtility.GetMainStageHandle();
-            StageHandle currentStage = StageUtility.GetStageHandle(gameObject);
-            if (currentStage != mainStage)
             {
-                PrefabStage prefabStage = PrefabStageUtility.GetPrefabStage(gameObject);
-                if (prefabStage != null)
-                    return true;
+                // if the game object is stored on disk, it is a prefab of some kind, despite not returning true for IsPartOfPrefabAsset =/
+                return true;
             }
-            
+            else
+            {
+                // If the GameObject is not persistent let's determine which stage we are in first because getting Prefab info depends on it
+                StageHandle mainStage = StageUtility.GetMainStageHandle();
+                StageHandle currentStage = StageUtility.GetStageHandle(gameObject);
+                if (currentStage != mainStage)
+                {
+                    var prefabStage = PrefabStageUtility.GetPrefabStage(gameObject);
+                    if (prefabStage != null)
+                    {
+                        return true;
+                    }
+                }
+            }
+
             return false;
         }
 
@@ -227,6 +232,6 @@ namespace FishNet.Object
         {
             CreateSceneId(force: false);
         }
-        #endif
+#endif
     }
 }

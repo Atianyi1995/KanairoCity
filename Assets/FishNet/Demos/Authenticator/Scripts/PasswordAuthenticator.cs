@@ -4,7 +4,6 @@ using FishNet.Managing;
 using FishNet.Managing.Logging;
 using FishNet.Transporting;
 using System;
-using FishNet.Managing.Transporting;
 using UnityEngine;
 
 namespace FishNet.Example.Authenticating
@@ -56,15 +55,10 @@ namespace FishNet.Example.Authenticating
              * example the client tries to authenticate soon as they connect. */
             if (args.ConnectionState != LocalConnectionState.Started)
                 return;
-
-            /* If was able to authenticate as clientHost
-             * there is no need to send the password authentication.
-             * Host authentication uses its own authentication approach. */
-            if (TryAuthenticateAsClientHost())
+            // Authentication was sent as host, no need to authenticate normally.
+            if (AuthenticateAsHost())
                 return;
 
-            /* If not sending host authentication, then
-             * authenticate normally. */
             PasswordBroadcast pb = new()
             {
                 Password = _password
@@ -103,7 +97,7 @@ namespace FishNet.Example.Authenticating
         /// <param name = "rb"></param>
         private void OnResponseBroadcast(ResponseBroadcast rb, Channel channel)
         {
-            string result = rb.Passed ? "Authentication complete." : "Authentication failed.";
+            string result = rb.Passed ? "Authentication complete." : "Authenitcation failed.";
             NetworkManager.Log(result);
         }
 

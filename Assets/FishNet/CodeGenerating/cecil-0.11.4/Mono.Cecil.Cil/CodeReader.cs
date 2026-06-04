@@ -34,7 +34,7 @@ namespace MonoFN.Cecil.Cil
         {
             this.method = method;
             reader.context = method;
-            int position = Position;
+            var position = Position;
             Position = (int)reader.image.ResolveVirtualAddress((uint)method.RVA);
             return position;
         }
@@ -47,7 +47,7 @@ namespace MonoFN.Cecil.Cil
 
         public MethodBody ReadMethodBody(MethodDefinition method)
         {
-            int position = MoveTo(method);
+            var position = MoveTo(method);
             body = new(method);
 
             ReadMethodBody();
@@ -58,9 +58,9 @@ namespace MonoFN.Cecil.Cil
 
         public int ReadCodeSize(MethodDefinition method)
         {
-            int position = MoveTo(method);
+            var position = MoveTo(method);
 
-            int code_size = ReadCodeSize();
+            var code_size = ReadCodeSize();
 
             MoveBackTo(position);
             return code_size;
@@ -68,7 +68,7 @@ namespace MonoFN.Cecil.Cil
 
         private int ReadCodeSize()
         {
-            byte flags = ReadByte();
+            var flags = ReadByte();
             switch (flags & 0x3)
             {
                 case 0x2: // tiny
@@ -83,7 +83,7 @@ namespace MonoFN.Cecil.Cil
 
         private void ReadMethodBody()
         {
-            byte flags = ReadByte();
+            var flags = ReadByte();
             switch (flags & 0x3)
             {
                 case 0x2: // tiny
@@ -99,7 +99,7 @@ namespace MonoFN.Cecil.Cil
                     throw new InvalidOperationException();
             }
 
-            ISymbolReader symbol_reader = reader.module.symbol_reader;
+            var symbol_reader = reader.module.symbol_reader;
 
             if (symbol_reader != null && method.debug_info == null)
                 method.debug_info = symbol_reader.Read(method);
@@ -110,7 +110,7 @@ namespace MonoFN.Cecil.Cil
 
         private void ReadFatMethod()
         {
-            ushort flags = ReadUInt16();
+            var flags = ReadUInt16();
             body.max_stack_size = ReadUInt16();
             body.code_size = (int)ReadUInt32();
             body.local_var_token = new(ReadUInt32());
@@ -127,8 +127,8 @@ namespace MonoFN.Cecil.Cil
 
         public VariableDefinitionCollection ReadVariables(MetadataToken local_var_token)
         {
-            int position = reader.position;
-            VariableDefinitionCollection variables = reader.ReadVariables(local_var_token, method);
+            var position = reader.position;
+            var variables = reader.ReadVariables(local_var_token, method);
             reader.position = position;
 
             return variables;
@@ -137,19 +137,19 @@ namespace MonoFN.Cecil.Cil
         private void ReadCode()
         {
             start = Position;
-            int code_size = body.code_size;
+            var code_size = body.code_size;
 
             if (code_size < 0 || Length <= (uint)(code_size + Position))
                 code_size = 0;
 
-            int end = start + code_size;
-            Collection<Instruction> instructions = body.instructions = new InstructionCollection(method, (code_size + 1) / 2);
+            var end = start + code_size;
+            var instructions = body.instructions = new InstructionCollection(method, (code_size + 1) / 2);
 
             while (Position < end)
             {
-                int offset = Position - start;
-                OpCode opcode = ReadOpCode();
-                Instruction current = new(offset, opcode);
+                var offset = Position - start;
+                var opcode = ReadOpCode();
+                var current = new Instruction(offset, opcode);
 
                 if (opcode.OperandType != OperandType.InlineNone)
                     current.operand = ReadOperand(current);
@@ -162,7 +162,7 @@ namespace MonoFN.Cecil.Cil
 
         private OpCode ReadOpCode()
         {
-            byte il_opcode = ReadByte();
+            var il_opcode = ReadByte();
             return il_opcode != 0xfe ? OpCodes.OneByteOpCode[il_opcode] : OpCodes.TwoBytesOpCode[ReadByte()];
         }
 
@@ -171,9 +171,9 @@ namespace MonoFN.Cecil.Cil
             switch (instruction.opcode.OperandType)
             {
                 case OperandType.InlineSwitch:
-                    int length = ReadInt32();
-                    int base_offset = Offset + 4 * length;
-                    int[] branches = new int [length];
+                    var length = ReadInt32();
+                    var base_offset = Offset + 4 * length;
+                    var branches = new int [length];
                     for (int i = 0; i < length; i++)
                         branches[i] = base_offset + ReadInt32();
                     return branches;
@@ -238,12 +238,12 @@ namespace MonoFN.Cecil.Cil
 
         private void ResolveBranches(Collection<Instruction> instructions)
         {
-            Instruction[] items = instructions.items;
-            int size = instructions.size;
+            var items = instructions.items;
+            var size = instructions.size;
 
             for (int i = 0; i < size; i++)
             {
-                Instruction instruction = items[i];
+                var instruction = items[i];
                 switch (instruction.opcode.OperandType)
                 {
                     case OperandType.ShortInlineBrTarget:
@@ -251,8 +251,8 @@ namespace MonoFN.Cecil.Cil
                         instruction.operand = GetInstruction((int)instruction.operand);
                         break;
                     case OperandType.InlineSwitch:
-                        int[] offsets = (int[])instruction.operand;
-                        Instruction[] branches = new Instruction [offsets.Length];
+                        var offsets = (int[])instruction.operand;
+                        var branches = new Instruction [offsets.Length];
                         for (int j = 0; j < offsets.Length; j++)
                             branches[j] = GetInstruction(offsets[j]);
 
@@ -269,8 +269,8 @@ namespace MonoFN.Cecil.Cil
 
         private static Instruction GetInstruction(Collection<Instruction> instructions, int offset)
         {
-            int size = instructions.size;
-            Instruction[] items = instructions.items;
+            var size = instructions.size;
+            var items = instructions.items;
             if (offset < 0 || offset > items[size - 1].offset)
                 return null;
 
@@ -279,8 +279,8 @@ namespace MonoFN.Cecil.Cil
             while (min <= max)
             {
                 int mid = min + (max - min) / 2;
-                Instruction instruction = items[mid];
-                int instruction_offset = instruction.offset;
+                var instruction = items[mid];
+                var instruction_offset = instruction.offset;
 
                 if (offset == instruction_offset)
                     return instruction;
@@ -301,7 +301,7 @@ namespace MonoFN.Cecil.Cil
             const byte fat_format = 0x40;
             const byte more_sects = 0x80;
 
-            byte flags = ReadByte();
+            var flags = ReadByte();
             if ((flags & fat_format) == 0)
                 ReadSmallSection();
             else
@@ -313,7 +313,7 @@ namespace MonoFN.Cecil.Cil
 
         private void ReadSmallSection()
         {
-            int count = ReadByte() / 12;
+            var count = ReadByte() / 12;
             Advance(2);
 
             ReadExceptionHandlers(count, () => (int)ReadUInt16(), () => (int)ReadByte());
@@ -322,7 +322,7 @@ namespace MonoFN.Cecil.Cil
         private void ReadFatSection()
         {
             Advance(-1);
-            int count = (ReadInt32() >> 8) / 24;
+            var count = (ReadInt32() >> 8) / 24;
 
             ReadExceptionHandlers(count, ReadInt32, ReadInt32);
         }
@@ -332,7 +332,7 @@ namespace MonoFN.Cecil.Cil
         {
             for (int i = 0; i < count; i++)
             {
-                ExceptionHandler handler = new((ExceptionHandlerType)(read_entry() & 0x7));
+                var handler = new ExceptionHandler((ExceptionHandlerType)(read_entry() & 0x7));
 
                 handler.TryStart = GetInstruction(read_entry());
                 handler.TryEnd = GetInstruction(handler.TryStart.Offset + read_length());
@@ -381,15 +381,15 @@ namespace MonoFN.Cecil.Cil
 
         private void ReadCustomDebugInformations(MethodDefinition method)
         {
-            Collection<CustomDebugInformation> custom_infos = method.custom_infos;
+            var custom_infos = method.custom_infos;
 
             for (int i = 0; i < custom_infos.Count; i++)
             {
-                StateMachineScopeDebugInformation state_machine_scope = custom_infos[i] as StateMachineScopeDebugInformation;
+                var state_machine_scope = custom_infos[i] as StateMachineScopeDebugInformation;
                 if (state_machine_scope != null)
                     ReadStateMachineScope(state_machine_scope);
 
-                AsyncMethodBodyDebugInformation async_method = custom_infos[i] as AsyncMethodBodyDebugInformation;
+                var async_method = custom_infos[i] as AsyncMethodBodyDebugInformation;
                 if (async_method != null)
                     ReadAsyncMethodBody(async_method);
             }
@@ -414,23 +414,23 @@ namespace MonoFN.Cecil.Cil
             if (state_machine_scope.scopes.IsNullOrEmpty())
                 return;
 
-            foreach (StateMachineScope scope in state_machine_scope.scopes)
+            foreach (var scope in state_machine_scope.scopes)
             {
                 scope.start = new(GetInstruction(scope.start.Offset));
 
-                Instruction end_instruction = GetInstruction(scope.end.Offset);
+                var end_instruction = GetInstruction(scope.end.Offset);
                 scope.end = end_instruction == null ? new() : new InstructionOffset(end_instruction);
             }
         }
 
         private void ReadSequencePoints()
         {
-            MethodDebugInformation symbol = method.debug_info;
+            var symbol = method.debug_info;
 
             for (int i = 0; i < symbol.sequence_points.Count; i++)
             {
-                SequencePoint sequence_point = symbol.sequence_points[i];
-                Instruction instruction = GetInstruction(sequence_point.Offset);
+                var sequence_point = symbol.sequence_points[i];
+                var instruction = GetInstruction(sequence_point.Offset);
                 if (instruction != null)
                     sequence_point.offset = new(instruction);
             }
@@ -444,19 +444,19 @@ namespace MonoFN.Cecil.Cil
 
         private void ReadScope(ScopeDebugInformation scope)
         {
-            Instruction start_instruction = GetInstruction(scope.Start.Offset);
+            var start_instruction = GetInstruction(scope.Start.Offset);
             if (start_instruction != null)
                 scope.Start = new(start_instruction);
 
-            Instruction end_instruction = GetInstruction(scope.End.Offset);
+            var end_instruction = GetInstruction(scope.End.Offset);
             scope.End = end_instruction != null ? new(end_instruction) : new InstructionOffset();
 
             if (!scope.variables.IsNullOrEmpty())
             {
                 for (int i = 0; i < scope.variables.Count; i++)
                 {
-                    VariableDebugInformation variable_info = scope.variables[i];
-                    VariableDefinition variable = GetVariable(variable_info.Index);
+                    var variable_info = scope.variables[i];
+                    var variable = GetVariable(variable_info.Index);
                     if (variable != null)
                         variable_info.index = new(variable);
                 }
@@ -468,11 +468,11 @@ namespace MonoFN.Cecil.Cil
 
         public ByteBuffer PatchRawMethodBody(MethodDefinition method, CodeWriter writer, out int code_size, out MetadataToken local_var_token)
         {
-            int position = MoveTo(method);
+            var position = MoveTo(method);
 
-            ByteBuffer buffer = new();
+            var buffer = new ByteBuffer();
 
-            byte flags = ReadByte();
+            var flags = ReadByte();
 
             switch (flags & 0x3)
             {
@@ -497,7 +497,7 @@ namespace MonoFN.Cecil.Cil
 
         private void PatchRawFatMethod(ByteBuffer buffer, CodeWriter writer, out int code_size, out MetadataToken local_var_token)
         {
-            ushort flags = ReadUInt16();
+            var flags = ReadUInt16();
             buffer.WriteUInt16(flags);
             buffer.WriteUInt16(ReadUInt16());
             code_size = ReadInt32();
@@ -506,7 +506,7 @@ namespace MonoFN.Cecil.Cil
 
             if (local_var_token.RID > 0)
             {
-                VariableDefinitionCollection variables = ReadVariables(local_var_token);
+                var variables = ReadVariables(local_var_token);
                 buffer.WriteUInt32(variables != null ? writer.GetStandAloneSignature(variables).ToUInt32() : 0);
             }
             else
@@ -522,22 +522,22 @@ namespace MonoFN.Cecil.Cil
 
         private void PatchRawCode(ByteBuffer buffer, int code_size, CodeWriter writer)
         {
-            MetadataBuilder metadata = writer.metadata;
+            var metadata = writer.metadata;
             buffer.WriteBytes(ReadBytes(code_size));
-            int end = buffer.position;
+            var end = buffer.position;
             buffer.position -= code_size;
 
             while (buffer.position < end)
             {
                 OpCode opcode;
-                byte il_opcode = buffer.ReadByte();
+                var il_opcode = buffer.ReadByte();
                 if (il_opcode != 0xfe)
                 {
                     opcode = OpCodes.OneByteOpCode[il_opcode];
                 }
                 else
                 {
-                    byte il_opcode2 = buffer.ReadByte();
+                    var il_opcode2 = buffer.ReadByte();
                     opcode = OpCodes.TwoBytesOpCode[il_opcode2];
                 }
 
@@ -563,16 +563,16 @@ namespace MonoFN.Cecil.Cil
                         buffer.position += 8;
                         break;
                     case OperandType.InlineSwitch:
-                        int length = buffer.ReadInt32();
+                        var length = buffer.ReadInt32();
                         buffer.position += length * 4;
                         break;
                     case OperandType.InlineString:
-                        string @string = GetString(new(buffer.ReadUInt32()));
+                        var @string = GetString(new(buffer.ReadUInt32()));
                         buffer.position -= 4;
                         buffer.WriteUInt32(new MetadataToken(TokenType.String, metadata.user_string_heap.GetStringIndex(@string)).ToUInt32());
                         break;
                     case OperandType.InlineSig:
-                        CallSite call_site = GetCallSite(new(buffer.ReadUInt32()));
+                        var call_site = GetCallSite(new(buffer.ReadUInt32()));
                         buffer.position -= 4;
                         buffer.WriteUInt32(writer.GetStandAloneSignature(call_site).ToUInt32());
                         break;
@@ -580,7 +580,7 @@ namespace MonoFN.Cecil.Cil
                     case OperandType.InlineType:
                     case OperandType.InlineMethod:
                     case OperandType.InlineField:
-                        IMetadataTokenProvider provider = reader.LookupToken(new(buffer.ReadUInt32()));
+                        var provider = reader.LookupToken(new(buffer.ReadUInt32()));
                         buffer.position -= 4;
                         buffer.WriteUInt32(metadata.LookupToken(provider).ToUInt32());
                         break;
@@ -590,14 +590,14 @@ namespace MonoFN.Cecil.Cil
 
         private void PatchRawSection(ByteBuffer buffer, MetadataBuilder metadata)
         {
-            int position = Position;
+            var position = Position;
             Align(4);
             buffer.WriteBytes(Position - position);
 
             const byte fat_format = 0x40;
             const byte more_sects = 0x80;
 
-            byte flags = ReadByte();
+            var flags = ReadByte();
             if ((flags & fat_format) == 0)
             {
                 buffer.WriteByte(flags);
@@ -614,13 +614,13 @@ namespace MonoFN.Cecil.Cil
 
         private void PatchRawSmallSection(ByteBuffer buffer, MetadataBuilder metadata)
         {
-            byte length = ReadByte();
+            var length = ReadByte();
             buffer.WriteByte(length);
             Advance(2);
 
             buffer.WriteUInt16(0);
 
-            int count = length / 12;
+            var count = length / 12;
 
             PatchRawExceptionHandlers(buffer, metadata, count, false);
         }
@@ -628,10 +628,10 @@ namespace MonoFN.Cecil.Cil
         private void PatchRawFatSection(ByteBuffer buffer, MetadataBuilder metadata)
         {
             Advance(-1);
-            int length = ReadInt32();
+            var length = ReadInt32();
             buffer.WriteInt32(length);
 
-            int count = (length >> 8) / 24;
+            var count = (length >> 8) / 24;
 
             PatchRawExceptionHandlers(buffer, metadata, count, true);
         }
@@ -646,13 +646,13 @@ namespace MonoFN.Cecil.Cil
                 ExceptionHandlerType handler_type;
                 if (fat_entry)
                 {
-                    uint type = ReadUInt32();
+                    var type = ReadUInt32();
                     handler_type = (ExceptionHandlerType)(type & 0x7);
                     buffer.WriteUInt32(type);
                 }
                 else
                 {
-                    ushort type = ReadUInt16();
+                    var type = ReadUInt16();
                     handler_type = (ExceptionHandlerType)(type & 0x7);
                     buffer.WriteUInt16(type);
                 }
@@ -662,7 +662,7 @@ namespace MonoFN.Cecil.Cil
                 switch (handler_type)
                 {
                     case ExceptionHandlerType.Catch:
-                        IMetadataTokenProvider exception = reader.LookupToken(ReadToken());
+                        var exception = reader.LookupToken(ReadToken());
                         buffer.WriteUInt32(metadata.LookupToken(exception).ToUInt32());
                         break;
                     default:

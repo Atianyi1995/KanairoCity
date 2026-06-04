@@ -26,13 +26,13 @@ namespace MonoFN.Cecil
     {
         public static byte[] GetPublicKey(WriterParameters parameters)
         {
-            using (RSA rsa = parameters.CreateRSA())
+            using (var rsa = parameters.CreateRSA())
             {
-                byte[] cspBlob = CryptoConvert.ToCapiPublicKeyBlob(rsa);
-                byte[] publicKey = new byte [12 + cspBlob.Length];
+                var cspBlob = CryptoConvert.ToCapiPublicKeyBlob(rsa);
+                var publicKey = new byte [12 + cspBlob.Length];
                 Buffer.BlockCopy(cspBlob, 0, publicKey, 12, cspBlob.Length);
                 // The first 12 bytes are documented at:
-                // http://msdn.microsoft.com/library/en-us/cprefadd/html/grfungethashfromfile.asp
+                // http:// msdn.microsoft.com/library/en-us/cprefadd/html/grfungethashfromfile.asp
                 // ALG_ID - Signature
                 publicKey[1] = 36;
                 // ALG_ID - Hash
@@ -51,7 +51,7 @@ namespace MonoFN.Cecil
         {
             int strong_name_pointer;
 
-            byte[] strong_name = CreateStrongName(parameters, HashStream(stream, writer, out strong_name_pointer));
+            var strong_name = CreateStrongName(parameters, HashStream(stream, writer, out strong_name_pointer));
             PatchStrongName(stream, strong_name_pointer, strong_name);
         }
 
@@ -65,9 +65,9 @@ namespace MonoFN.Cecil
         {
             const string hash_algo = "SHA1";
 
-            using (RSA rsa = parameters.CreateRSA())
+            using (var rsa = parameters.CreateRSA())
             {
-                RSAPKCS1SignatureFormatter formatter = new(rsa);
+                var formatter = new RSAPKCS1SignatureFormatter(rsa);
                 formatter.SetHashAlgorithm(hash_algo);
 
                 byte[] signature = formatter.CreateSignature(hash);
@@ -81,20 +81,20 @@ namespace MonoFN.Cecil
         {
             const int buffer_size = 8192;
 
-            Section text = writer.text;
-            int header_size = (int)writer.GetHeaderSize();
-            int text_section_pointer = (int)text.PointerToRawData;
-            DataDirectory strong_name_directory = writer.GetStrongNameSignatureDirectory();
+            var text = writer.text;
+            var header_size = (int)writer.GetHeaderSize();
+            var text_section_pointer = (int)text.PointerToRawData;
+            var strong_name_directory = writer.GetStrongNameSignatureDirectory();
 
             if (strong_name_directory.Size == 0)
                 throw new InvalidOperationException();
 
             strong_name_pointer = (int)(text_section_pointer + (strong_name_directory.VirtualAddress - text.VirtualAddress));
-            int strong_name_length = (int)strong_name_directory.Size;
+            var strong_name_length = (int)strong_name_directory.Size;
 
-            SHA1Managed sha1 = new();
-            byte[] buffer = new byte [buffer_size];
-            using (CryptoStream crypto_stream = new(Stream.Null, sha1, CryptoStreamMode.Write))
+            var sha1 = new SHA1Managed();
+            var buffer = new byte [buffer_size];
+            using (var crypto_stream = new CryptoStream(Stream.Null, sha1, CryptoStreamMode.Write))
             {
                 stream.Seek(0, SeekOrigin.Begin);
                 CopyStreamChunk(stream, crypto_stream, buffer, header_size);
@@ -124,7 +124,7 @@ namespace MonoFN.Cecil
             if (!File.Exists(file))
                 return Empty<byte>.Array;
 
-            using (FileStream stream = new(file, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
                 return ComputeHash(stream);
             }
@@ -134,10 +134,10 @@ namespace MonoFN.Cecil
         {
             const int buffer_size = 8192;
 
-            SHA1Managed sha1 = new();
-            byte[] buffer = new byte [buffer_size];
+            var sha1 = new SHA1Managed();
+            var buffer = new byte [buffer_size];
 
-            using (CryptoStream crypto_stream = new(Stream.Null, sha1, CryptoStreamMode.Write))
+            using (var crypto_stream = new CryptoStream(Stream.Null, sha1, CryptoStreamMode.Write))
             {
                 CopyStreamChunk(stream, crypto_stream, buffer, (int)stream.Length);
             }
@@ -147,9 +147,9 @@ namespace MonoFN.Cecil
 
         public static byte[] ComputeHash(params ByteBuffer[] buffers)
         {
-            SHA1Managed sha1 = new();
+            var sha1 = new SHA1Managed();
 
-            using (CryptoStream crypto_stream = new(Stream.Null, sha1, CryptoStreamMode.Write))
+            using (var crypto_stream = new CryptoStream(Stream.Null, sha1, CryptoStreamMode.Write))
             {
                 for (int i = 0; i < buffers.Length; i++)
                 {
@@ -163,7 +163,7 @@ namespace MonoFN.Cecil
         public static Guid ComputeGuid(byte[] hash)
         {
             // From corefx/src/System.Reflection.Metadata/src/System/Reflection/Metadata/BlobContentId.cs
-            byte[] guid = new byte [16];
+            var guid = new byte [16];
             Buffer.BlockCopy(hash, 0, guid, 0, 16);
 
             // modify the guid data so it decodes to the form of a "random" guid ala rfc4122
@@ -189,7 +189,7 @@ namespace MonoFN.Cecil
             else if (!TryGetKeyContainer(writer_parameters.StrongNameKeyPair, out key, out key_container))
                 return CryptoConvert.FromCapiKeyBlob(key);
 
-            CspParameters parameters = new()
+            var parameters = new CspParameters
             {
                 Flags = CspProviderFlags.UseMachineKeyStore,
                 KeyContainerName = key_container,
@@ -201,7 +201,7 @@ namespace MonoFN.Cecil
 
         private static bool TryGetKeyContainer(ISerializable key_pair, out byte[] key, out string key_container)
         {
-            SerializationInfo info = new(typeof(StrongNameKeyPair), new FormatterConverter());
+            var info = new SerializationInfo(typeof(StrongNameKeyPair), new FormatterConverter());
             key_pair.GetObjectData(info, new());
 
             key = (byte[])info.GetValue("_keyPairArray", typeof(byte[]));

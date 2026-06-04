@@ -81,7 +81,7 @@ namespace MonoFN.Cecil
         {
             get
             {
-                StringBuilder signature = new();
+                var signature = new StringBuilder();
                 signature.Append(function.Name);
                 signature.Append(" ");
                 signature.Append(function.ReturnType.FullName);

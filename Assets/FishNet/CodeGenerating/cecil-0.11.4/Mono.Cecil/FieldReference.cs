@@ -51,7 +51,7 @@ namespace MonoFN.Cecil
 
         public new virtual FieldDefinition Resolve()
         {
-            ModuleDefinition module = Module;
+            var module = Module;
             if (module == null)
                 throw new NotSupportedException();
 

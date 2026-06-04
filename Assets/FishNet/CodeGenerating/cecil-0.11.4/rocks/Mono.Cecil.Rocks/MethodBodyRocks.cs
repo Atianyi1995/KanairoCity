@@ -23,7 +23,7 @@ namespace MonoFN.Cecil.Rocks
             if (self == null)
                 throw new ArgumentNullException("self");
 
-            foreach (Instruction instruction in self.Instructions)
+            foreach (var instruction in self.Instructions)
             {
                 if (instruction.OpCode.OpCodeType != OpCodeType.Macro)
                     continue;
@@ -186,12 +186,12 @@ namespace MonoFN.Cecil.Rocks
 
         private static void OptimizeLongs(this MethodBody self)
         {
-            for (int i = 0; i < self.Instructions.Count; i++)
+            for (var i = 0; i < self.Instructions.Count; i++)
             {
-                Instruction instruction = self.Instructions[i];
+                var instruction = self.Instructions[i];
                 if (instruction.OpCode.Code != Code.Ldc_I8)
                     continue;
-                long l = (long)instruction.Operand;
+                var l = (long)instruction.Operand;
                 if (l >= int.MaxValue || l <= int.MinValue)
                     continue;
                 ExpandMacro(instruction, OpCodes.Ldc_I4, (int)l);
@@ -204,9 +204,9 @@ namespace MonoFN.Cecil.Rocks
             if (self == null)
                 throw new ArgumentNullException("self");
 
-            MethodDefinition method = self.Method;
+            var method = self.Method;
 
-            foreach (Instruction instruction in self.Instructions)
+            foreach (var instruction in self.Instructions)
             {
                 int index;
                 switch (instruction.OpCode.Code)
@@ -345,7 +345,7 @@ namespace MonoFN.Cecil.Rocks
         {
             ComputeOffsets(body);
 
-            foreach (Instruction instruction in body.Instructions)
+            foreach (var instruction in body.Instructions)
             {
                 if (instruction.OpCode.OperandType != OperandType.InlineBrTarget)
                     continue;
@@ -357,7 +357,7 @@ namespace MonoFN.Cecil.Rocks
 
         private static bool OptimizeBranch(Instruction instruction)
         {
-            int offset = ((Instruction)instruction.Operand).Offset - (instruction.Offset + instruction.OpCode.Size + 4);
+            var offset = ((Instruction)instruction.Operand).Offset - (instruction.Offset + instruction.OpCode.Size + 4);
             if (!(offset >= -128 && offset <= 127))
                 return false;
 
@@ -412,8 +412,8 @@ namespace MonoFN.Cecil.Rocks
 
         private static void ComputeOffsets(MethodBody body)
         {
-            int offset = 0;
-            foreach (Instruction instruction in body.Instructions)
+            var offset = 0;
+            foreach (var instruction in body.Instructions)
             {
                 instruction.Offset = offset;
                 offset += instruction.GetSize();

@@ -1,5 +1,4 @@
-﻿#if !FISHNET_THREADED_TICKSMOOTHERS
-using FishNet.Object;
+﻿using FishNet.Object;
 using UnityEngine;
 
 namespace FishNet.Component.Transforming.Beta
@@ -51,4 +50,3 @@ namespace FishNet.Component.Transforming.Beta
         }
     }
 }
-#endif

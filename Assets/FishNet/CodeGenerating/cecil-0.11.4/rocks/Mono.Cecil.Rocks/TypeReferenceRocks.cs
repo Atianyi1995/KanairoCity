@@ -27,7 +27,7 @@ namespace MonoFN.Cecil.Rocks
             if (rank == 0)
                 throw new ArgumentOutOfRangeException("rank");
 
-            ArrayType array = new(self);
+            var array = new ArrayType(self);
 
             for (int i = 1; i < rank; i++)
                 array.Dimensions.Add(new());
@@ -66,9 +66,9 @@ namespace MonoFN.Cecil.Rocks
             if (self.GenericParameters.Count != arguments.Length)
                 throw new ArgumentException();
 
-            GenericInstanceType instance = new(self, arguments.Length);
+            var instance = new GenericInstanceType(self, arguments.Length);
 
-            foreach (TypeReference argument in arguments)
+            foreach (var argument in arguments)
                 instance.GenericArguments.Add(argument);
 
             return instance;

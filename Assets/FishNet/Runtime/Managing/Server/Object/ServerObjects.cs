@@ -388,14 +388,14 @@ namespace FishNet.Managing.Server
             foreach (NetworkObject nob in nobs)
             {
                 nob.SetIsNestedThroughTraversal();
-                nob.UnsetHasBeenInitialized();
+                nob.UnsetInitializedValuesSet();
             }
 
             // Initialize sceneNobs cache, but do not invoke callbacks till next frame.
             foreach (NetworkObject nob in nobs)
             {
                 if (nob.IsSceneObject && !nob.IsNested)
-                    nob.SetInitializedValues(parentNob: null, ignoreSerializedTimestamp: false);
+                    nob.SetInitializedValues(parentNob: null, force: false);
             }
         }
 
@@ -545,9 +545,6 @@ namespace FishNet.Managing.Server
                 return;
             }
 
-            //Unset the sceneId on the instantiated copy.
-            networkObject.SceneId = 0;
-            
             if (!NetworkManager.ServerManager.Started)
             {
                 // Neither server nor client are started.

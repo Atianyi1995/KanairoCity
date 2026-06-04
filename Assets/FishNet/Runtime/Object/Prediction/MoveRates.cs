@@ -1,5 +1,4 @@
 ﻿using GameKit.Dependencies.Utilities;
-using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Scripting;
 
@@ -102,12 +101,6 @@ namespace FishNet.Object.Prediction
         /// </summary>
         public bool IsScaleInstantValue => Scale == INSTANT_VALUE;
 
-        #region Private Profiler Markers
-        private static readonly ProfilerMarker _pm_GetMoveRatesFull = new("MoveRates.GetMoveRates(Vector3, Vector3, Quaternion, Quaternion, Vector3, Vector3, float, float)");
-        private static readonly ProfilerMarker _pm_GetMoveRatesVec = new("MoveRates.GetMoveRates(Vector3, Vector3, float, float)");
-        private static readonly ProfilerMarker _pm_Move = new("MoveRates.Move(Transform, TransformPropertiesFlag, Vector3, float, Quaternion, float, Vector3, float, float, bool)");
-        #endregion
-
         /// <summary>
         /// Sets all rates to instant.
         /// </summary>
@@ -208,25 +201,22 @@ namespace FishNet.Object.Prediction
         /// </summary>
         public static MoveRates GetMoveRates(Vector3 fromPosition, Vector3 toPosition, Quaternion fromRotation, Quaternion toRotation, Vector3 fromScale, Vector3 toScale, float duration, float teleportThreshold)
         {
-            using (_pm_GetMoveRatesFull.Auto())
-            {
-                float rate;
+            float rate;
 
-                /* Position. */
-                rate = toPosition.GetRate(fromPosition, duration, out float distance);
-                // Basic teleport check.
-                if (teleportThreshold != UNSET_VALUE && distance > teleportThreshold)
-                    return new(INSTANT_VALUE, INSTANT_VALUE, INSTANT_VALUE, duration);
+            /* Position. */
+            rate = toPosition.GetRate(fromPosition, duration, out float distance);
+            // Basic teleport check.
+            if (teleportThreshold != UNSET_VALUE && distance > teleportThreshold)
+                return new(INSTANT_VALUE, INSTANT_VALUE, INSTANT_VALUE, duration);
 
-                //Smoothing.
-                float positionRate = rate.SetIfUnderTolerance(0.0001f, INSTANT_VALUE);
-                rate = toRotation.GetRate(fromRotation, duration, out _);
-                float rotationRate = rate.SetIfUnderTolerance(0.2f, INSTANT_VALUE);
-                rate = toScale.GetRate(fromScale, duration, out _);
-                float scaleRate = rate.SetIfUnderTolerance(0.0001f, INSTANT_VALUE);
+            //Smoothing.
+            float positionRate = rate.SetIfUnderTolerance(0.0001f, INSTANT_VALUE);
+            rate = toRotation.GetRate(fromRotation, duration, out _);
+            float rotationRate = rate.SetIfUnderTolerance(0.2f, INSTANT_VALUE);
+            rate = toScale.GetRate(fromScale, duration, out _);
+            float scaleRate = rate.SetIfUnderTolerance(0.0001f, INSTANT_VALUE);
 
-                return new(positionRate, rotationRate, scaleRate, duration);
-            }
+            return new(positionRate, rotationRate, scaleRate, duration);
         }
 
         /// <summary>
@@ -234,24 +224,21 @@ namespace FishNet.Object.Prediction
         /// </summary>
         public static float GetMoveRate(Vector3 fromPosition, Vector3 toPosition, float duration, float teleportThreshold)
         {
-            using (_pm_GetMoveRatesVec.Auto())
-            {
-                float rate;
-                float distance;
+            float rate;
+            float distance;
 
-                /* Position. */
-                rate = toPosition.GetRate(fromPosition, duration, out distance);
-                //Basic teleport check.
-                if (teleportThreshold != UNSET_VALUE && distance > teleportThreshold)
-                {
-                    return INSTANT_VALUE;
-                }
-                //Smoothing.
-                else
-                {
-                    float positionRate = rate.SetIfUnderTolerance(0.0001f, INSTANT_VALUE);
-                    return positionRate;
-                }
+            /* Position. */
+            rate = toPosition.GetRate(fromPosition, duration, out distance);
+            //Basic teleport check.
+            if (teleportThreshold != UNSET_VALUE && distance > teleportThreshold)
+            {
+                return INSTANT_VALUE;
+            }
+            //Smoothing.
+            else
+            {
+                float positionRate = rate.SetIfUnderTolerance(0.0001f, INSTANT_VALUE);
+                return positionRate;
             }
         }
 
@@ -294,85 +281,82 @@ namespace FishNet.Object.Prediction
         /// </summary>
         public static void Move(Transform movingTransform, TransformPropertiesFlag movedProperties, Vector3 posGoal, float posRate, Quaternion rotGoal, float rotRate, Vector3 scaleGoal, float scaleRate, float delta, bool useWorldSpace)
         {
-            using (_pm_Move.Auto())
+            Transform t = movingTransform;
+
+            bool containsPosition = movedProperties.FastContains(TransformPropertiesFlag.Position);
+            bool containsRotation = movedProperties.FastContains(TransformPropertiesFlag.Rotation);
+            bool containsScale = movedProperties.FastContains(TransformPropertiesFlag.Scale);
+
+            //World space.
+            if (useWorldSpace)
             {
-                Transform t = movingTransform;
-
-                bool containsPosition = movedProperties.FastContains(TransformPropertiesFlag.Position);
-                bool containsRotation = movedProperties.FastContains(TransformPropertiesFlag.Rotation);
-                bool containsScale = movedProperties.FastContains(TransformPropertiesFlag.Scale);
-
-                //World space.
-                if (useWorldSpace)
+                if (containsPosition)
                 {
-                    if (containsPosition)
+                    if (posRate == INSTANT_VALUE)
                     {
-                        if (posRate == INSTANT_VALUE)
-                        {
-                            t.position = posGoal;
-                        }
-                        else if (posRate == UNSET_VALUE) { }
-                        else
-                        {
-                            t.position = Vector3.MoveTowards(t.position, posGoal, posRate * delta);
-                        }
+                        t.position = posGoal;
                     }
-
-                    if (containsRotation)
-                    {
-                        if (rotRate == INSTANT_VALUE)
-                        {
-                            t.rotation = rotGoal;
-                        }
-                        else if (rotRate == UNSET_VALUE) { }
-                        else
-                        {
-                            t.rotation = Quaternion.RotateTowards(t.rotation, rotGoal, rotRate * delta);
-                        }
-                    }
-                }
-                //Local space.
-                else
-                {
-                    if (containsPosition)
-                    {
-                        if (posRate == INSTANT_VALUE)
-                        {
-                            t.localPosition = posGoal;
-                        }
-                        else if (posRate == UNSET_VALUE) { }
-                        else
-                        {
-                            t.localPosition = Vector3.MoveTowards(t.localPosition, posGoal, posRate * delta);
-                        }
-                    }
-
-                    if (containsRotation)
-                    {
-                        if (rotRate == INSTANT_VALUE)
-                        {
-                            t.localRotation = rotGoal;
-                        }
-                        else if (rotRate == UNSET_VALUE) { }
-                        else
-                        {
-                            t.localRotation = Quaternion.RotateTowards(t.localRotation, rotGoal, rotRate * delta);
-                        }
-                    }
-                }
-
-                //Scale always uses local.
-                if (containsScale)
-                {
-                    if (scaleRate == INSTANT_VALUE)
-                    {
-                        t.localScale = scaleGoal;
-                    }
-                    else if (scaleRate == UNSET_VALUE) { }
+                    else if (posRate == UNSET_VALUE) { }
                     else
                     {
-                        t.localScale = Vector3.MoveTowards(t.localScale, scaleGoal, scaleRate * delta);
+                        t.position = Vector3.MoveTowards(t.position, posGoal, posRate * delta);
                     }
+                }
+
+                if (containsRotation)
+                {
+                    if (rotRate == INSTANT_VALUE)
+                    {
+                        t.rotation = rotGoal;
+                    }
+                    else if (rotRate == UNSET_VALUE) { }
+                    else
+                    {
+                        t.rotation = Quaternion.RotateTowards(t.rotation, rotGoal, rotRate * delta);
+                    }
+                }
+            }
+            //Local space.
+            else
+            {
+                if (containsPosition)
+                {
+                    if (posRate == INSTANT_VALUE)
+                    {
+                        t.localPosition = posGoal;
+                    }
+                    else if (posRate == UNSET_VALUE) { }
+                    else
+                    {
+                        t.localPosition = Vector3.MoveTowards(t.localPosition, posGoal, posRate * delta);
+                    }
+                }
+
+                if (containsRotation)
+                {
+                    if (rotRate == INSTANT_VALUE)
+                    {
+                        t.localRotation = rotGoal;
+                    }
+                    else if (rotRate == UNSET_VALUE) { }
+                    else
+                    {
+                        t.localRotation = Quaternion.RotateTowards(t.localRotation, rotGoal, rotRate * delta);
+                    }
+                }
+            }
+
+            //Scale always uses local.
+            if (containsScale)
+            {
+                if (scaleRate == INSTANT_VALUE)
+                {
+                    t.localScale = scaleGoal;
+                }
+                else if (scaleRate == UNSET_VALUE) { }
+                else
+                {
+                    t.localScale = Vector3.MoveTowards(t.localScale, scaleGoal, scaleRate * delta);
                 }
             }
         }

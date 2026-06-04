@@ -23,8 +23,8 @@ namespace MonoFN.Cecil
             if (a == null || b == null)
                 return false;
 
-            MetadataType aMetadataType = a.MetadataType;
-            MetadataType bMetadataType = b.MetadataType;
+            var aMetadataType = a.MetadataType;
+            var bMetadataType = b.MetadataType;
 
             if (aMetadataType == MetadataType.GenericInstance || bMetadataType == MetadataType.GenericInstance)
             {
@@ -39,8 +39,8 @@ namespace MonoFN.Cecil
                 if (aMetadataType != bMetadataType)
                     return false;
 
-                ArrayType a1 = (ArrayType)a;
-                ArrayType b1 = (ArrayType)b;
+                var a1 = (ArrayType)a;
+                var b1 = (ArrayType)b;
                 if (a1.Rank != b1.Rank)
                     return false;
 
@@ -84,8 +84,8 @@ namespace MonoFN.Cecil
                 if (aMetadataType != bMetadataType)
                     return false;
 
-                RequiredModifierType a1 = (RequiredModifierType)a;
-                RequiredModifierType b1 = (RequiredModifierType)b;
+                var a1 = (RequiredModifierType)a;
+                var b1 = (RequiredModifierType)b;
 
                 return AreEqual(a1.ModifierType, b1.ModifierType, comparisonMode) && AreEqual(a1.ElementType, b1.ElementType, comparisonMode);
             }
@@ -95,8 +95,8 @@ namespace MonoFN.Cecil
                 if (aMetadataType != bMetadataType)
                     return false;
 
-                OptionalModifierType a1 = (OptionalModifierType)a;
-                OptionalModifierType b1 = (OptionalModifierType)b;
+                var a1 = (OptionalModifierType)a;
+                var b1 = (OptionalModifierType)b;
 
                 return AreEqual(a1.ModifierType, b1.ModifierType, comparisonMode) && AreEqual(a1.ElementType, b1.ElementType, comparisonMode);
             }
@@ -120,8 +120,8 @@ namespace MonoFN.Cecil
             if (!a.Name.Equals(b.Name) || !a.Namespace.Equals(b.Namespace))
                 return false;
 
-            TypeDefinition xDefinition = a.Resolve();
-            TypeDefinition yDefinition = b.Resolve();
+            var xDefinition = a.Resolve();
+            var yDefinition = b.Resolve();
 
             // For loose signature the types could be in different assemblies, as long as the type names match we will consider them equal
             if (comparisonMode == TypeComparisonMode.SignatureOnlyLoose)
@@ -149,11 +149,11 @@ namespace MonoFN.Cecil
             if (a.Type != b.Type)
                 return false;
 
-            TypeReference aOwnerType = a.Owner as TypeReference;
+            var aOwnerType = a.Owner as TypeReference;
             if (aOwnerType != null && AreEqual(aOwnerType, b.Owner as TypeReference, comparisonMode))
                 return true;
 
-            MethodReference aOwnerMethod = a.Owner as MethodReference;
+            var aOwnerMethod = a.Owner as MethodReference;
             if (aOwnerMethod != null && comparisonMode != TypeComparisonMode.SignatureOnlyLoose && MethodReferenceComparer.AreEqual(aOwnerMethod, b.Owner as MethodReference))
                 return true;
 
@@ -165,7 +165,7 @@ namespace MonoFN.Cecil
             if (ReferenceEquals(a, b))
                 return true;
 
-            int aGenericArgumentsCount = a.GenericArguments.Count;
+            var aGenericArgumentsCount = a.GenericArguments.Count;
             if (aGenericArgumentsCount != b.GenericArguments.Count)
                 return false;
 
@@ -192,33 +192,33 @@ namespace MonoFN.Cecil
             const int pinnedMultiplier = 53;
             const int sentinelMultiplier = 59;
 
-            MetadataType metadataType = obj.MetadataType;
+            var metadataType = obj.MetadataType;
 
             if (metadataType == MetadataType.GenericInstance)
             {
-                GenericInstanceType genericInstanceType = (GenericInstanceType)obj;
-                int hashCode = GetHashCodeFor(genericInstanceType.ElementType) * hashCodeMultiplier + genericInstanceTypeMultiplier;
-                for (int i = 0; i < genericInstanceType.GenericArguments.Count; i++)
+                var genericInstanceType = (GenericInstanceType)obj;
+                var hashCode = GetHashCodeFor(genericInstanceType.ElementType) * hashCodeMultiplier + genericInstanceTypeMultiplier;
+                for (var i = 0; i < genericInstanceType.GenericArguments.Count; i++)
                     hashCode = hashCode * hashCodeMultiplier + GetHashCodeFor(genericInstanceType.GenericArguments[i]);
                 return hashCode;
             }
 
             if (metadataType == MetadataType.Array)
             {
-                ArrayType arrayType = (ArrayType)obj;
+                var arrayType = (ArrayType)obj;
                 return GetHashCodeFor(arrayType.ElementType) * hashCodeMultiplier + arrayType.Rank.GetHashCode();
             }
 
             if (metadataType == MetadataType.Var || metadataType == MetadataType.MVar)
             {
-                GenericParameter genericParameter = (GenericParameter)obj;
-                int hashCode = genericParameter.Position.GetHashCode() * hashCodeMultiplier + ((int)metadataType).GetHashCode();
+                var genericParameter = (GenericParameter)obj;
+                var hashCode = genericParameter.Position.GetHashCode() * hashCodeMultiplier + ((int)metadataType).GetHashCode();
 
-                TypeReference ownerTypeReference = genericParameter.Owner as TypeReference;
+                var ownerTypeReference = genericParameter.Owner as TypeReference;
                 if (ownerTypeReference != null)
                     return hashCode * hashCodeMultiplier + GetHashCodeFor(ownerTypeReference);
 
-                MethodReference ownerMethodReference = genericParameter.Owner as MethodReference;
+                var ownerMethodReference = genericParameter.Owner as MethodReference;
                 if (ownerMethodReference != null)
                     return hashCode * hashCodeMultiplier + MethodReferenceComparer.GetHashCodeFor(ownerMethodReference);
 
@@ -227,41 +227,41 @@ namespace MonoFN.Cecil
 
             if (metadataType == MetadataType.ByReference)
             {
-                ByReferenceType byReferenceType = (ByReferenceType)obj;
+                var byReferenceType = (ByReferenceType)obj;
                 return GetHashCodeFor(byReferenceType.ElementType) * hashCodeMultiplier * byReferenceMultiplier;
             }
 
             if (metadataType == MetadataType.Pointer)
             {
-                PointerType pointerType = (PointerType)obj;
+                var pointerType = (PointerType)obj;
                 return GetHashCodeFor(pointerType.ElementType) * hashCodeMultiplier * pointerMultiplier;
             }
 
             if (metadataType == MetadataType.RequiredModifier)
             {
-                RequiredModifierType requiredModifierType = (RequiredModifierType)obj;
-                int hashCode = GetHashCodeFor(requiredModifierType.ElementType) * requiredModifierMultiplier;
+                var requiredModifierType = (RequiredModifierType)obj;
+                var hashCode = GetHashCodeFor(requiredModifierType.ElementType) * requiredModifierMultiplier;
                 hashCode = hashCode * hashCodeMultiplier + GetHashCodeFor(requiredModifierType.ModifierType);
                 return hashCode;
             }
 
             if (metadataType == MetadataType.OptionalModifier)
             {
-                OptionalModifierType optionalModifierType = (OptionalModifierType)obj;
-                int hashCode = GetHashCodeFor(optionalModifierType.ElementType) * optionalModifierMultiplier;
+                var optionalModifierType = (OptionalModifierType)obj;
+                var hashCode = GetHashCodeFor(optionalModifierType.ElementType) * optionalModifierMultiplier;
                 hashCode = hashCode * hashCodeMultiplier + GetHashCodeFor(optionalModifierType.ModifierType);
                 return hashCode;
             }
 
             if (metadataType == MetadataType.Pinned)
             {
-                PinnedType pinnedType = (PinnedType)obj;
+                var pinnedType = (PinnedType)obj;
                 return GetHashCodeFor(pinnedType.ElementType) * hashCodeMultiplier * pinnedMultiplier;
             }
 
             if (metadataType == MetadataType.Sentinel)
             {
-                SentinelType sentinelType = (SentinelType)obj;
+                var sentinelType = (SentinelType)obj;
                 return GetHashCodeFor(sentinelType.ElementType) * hashCodeMultiplier * sentinelMultiplier;
             }
 

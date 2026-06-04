@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using FishNet.Object;
 using FishNet.Object.Prediction;
 using FishNet.Transporting;
 using FishNet.Utility.Template;
@@ -132,7 +133,7 @@ namespace FishNet.Demo.Prediction.CharacterControllers
                     _goalIndex = 0;
             }
         }
-        
+
         [Reconcile]
         private void PerformReconcile(ReconcileData rd, Channel channel = Channel.Unreliable)
         {

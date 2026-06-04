@@ -92,7 +92,7 @@ namespace MonoFN.Cecil
                 return;
             }
 
-            Collection<ModuleDefinition> modules = Modules;
+            var modules = Modules;
             for (int i = 0; i < modules.Count; i++)
                 modules[i].Dispose();
         }
@@ -112,7 +112,7 @@ namespace MonoFN.Cecil
             if (parameters.Kind == ModuleKind.NetModule)
                 throw new ArgumentException("kind");
 
-            AssemblyDefinition assembly = ModuleDefinition.CreateModule(moduleName, parameters).Assembly;
+            var assembly = ModuleDefinition.CreateModule(moduleName, parameters).Assembly;
             assembly.Name = assemblyName;
 
             return assembly;
@@ -140,7 +140,7 @@ namespace MonoFN.Cecil
 
         private static AssemblyDefinition ReadAssembly(ModuleDefinition module)
         {
-            AssemblyDefinition assembly = module.Assembly;
+            var assembly = module.Assembly;
             if (assembly == null)
                 throw new ArgumentException();
 
